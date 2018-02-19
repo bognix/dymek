@@ -1,0 +1,58 @@
+service: dymek
+
+provider:
+  name: aws
+  runtime: nodejs6.10
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - { "Fn::GetAtt": ["MarkersDynamoDBTable", "Arn" ] }
+  environment:
+    MARKERS_TABLE: ${self:custom.tableName}
+    DEV_DB_PORT: ${self:custom.dynamodb.start.port}
+
+plugins:
+  - serverless-dynamodb-local
+  - serverless-offline
+
+custom:
+  tableName: 'markers-table-${self:provider.stage}'
+  dynamodb:
+    start:
+      migrate: true
+      port: 9123
+
+functions:
+  app:
+    handler: index.handler
+    events:
+      - http: ANY /
+  api:
+    handler: index.handler
+    events:
+      - http: ANY /api/{proxy+}
+
+resources:
+  Resources:
+    QuizQuestionsDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.tableName}

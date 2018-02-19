@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "aws-sdk": "^2.197.0",
+    "body-parser": "^1.18.2",
+    "express": "^4.16.2",
+    "serverless-dynamodb-local": "^0.2.27",
+    "serverless-http": "^1.5.3",
+    "serverless-offline": "^3.18.0",
+    "uuid": "^3.2.1"
+  },
+  "name": "dymek",
+  "version": "0.1.0",
+  "description": "Dymek detection",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
