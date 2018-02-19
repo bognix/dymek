@@ -1,4 +1,4 @@
-# Smrodek
+# Dymek
 
 ## Development environment
 
