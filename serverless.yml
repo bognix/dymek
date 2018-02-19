@@ -21,8 +21,10 @@ provider:
 plugins:
   - serverless-dynamodb-local
   - serverless-offline
+  - serverless-webpack
 
 custom:
+  webpackIncludeModules: true
   tableName: 'markers-table-${self:provider.stage}'
   dynamodb:
     start:
