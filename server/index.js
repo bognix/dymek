@@ -4,7 +4,7 @@ const express = require('express')
 const app = express()
 const AWS = require('aws-sdk');
 const uuid = require('uuid/v4')
-const apiRouter = require('./server/api')
+const apiRouter = require('./api')
 
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
 const IS_OFFLINE = process.env.IS_OFFLINE;

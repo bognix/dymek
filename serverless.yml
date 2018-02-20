@@ -21,7 +21,6 @@ provider:
 plugins:
   - serverless-dynamodb-local
   - serverless-offline
-  - serverless-webpack
 
 custom:
   webpackIncludeModules: true
@@ -32,18 +31,14 @@ custom:
       port: 9123
 
 functions:
-  app:
-    handler: index.handler
-    events:
-      - http: ANY /
   api:
-    handler: index.handler
+    handler: server/index.handler
     events:
       - http: ANY /api/{proxy+}
 
 resources:
   Resources:
-    QuizQuestionsDynamoDBTable:
+    MarkersDynamoDBTable:
       Type: 'AWS::DynamoDB::Table'
       Properties:
         AttributeDefinitions:

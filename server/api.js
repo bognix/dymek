@@ -48,21 +48,21 @@ const getRouter = (db) => {
         const {content, id} = result.Item;
         return res.json({ content, id });
       } else {
-        return res.status(404).json({ error: "Marker not found" });
+        return res.status(404).json({ error: 'Marker not found' });
       }
     });
   })
 
   router.post('/markers', function (req, res) {
-    const { lattitude, longitude } = req.body;
-    if (!lattitude || !longitude) {
+    const { latitude, longitude } = req.body;
+    if (!latitude || !longitude) {
       res.status(400).json({ error: 'Lat or Long not set' });
     }
 
     const id = uuid()
     const params = {
       TableName: MARKERS_TABLE,
-      Item: {id,lattitude, longitude},
+      Item: {id, latitude, longitude},
     };
 
     db.put(params, (error) => {
@@ -70,7 +70,7 @@ const getRouter = (db) => {
         console.log(error);
         res.status(400).json({ error: 'Could not create marker' });
       }
-      res.json({ id, lattitude, longitude });
+      res.json({ id, latitude, longitude });
     });
   })
 
