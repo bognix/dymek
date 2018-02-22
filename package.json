@@ -6,7 +6,7 @@
     "serverless-http": "^1.5.3",
     "uuid": "^3.2.1"
   },
-  "name": "dymek",
+  "name": "dymek-api",
   "version": "0.1.0",
   "description": "Dymek detection",
   "main": "index.js",

@@ -1,4 +1,4 @@
-service: dymek
+service: dymek-api
 
 provider:
   name: aws
@@ -34,7 +34,14 @@ functions:
   api:
     handler: server/index.handler
     events:
-      - http: ANY /api/{proxy+}
+      - http:
+          path: /api/markers
+          method: get
+          cors: true
+      - http:
+          path: /api/markers
+          method: post
+          cors: true
 
 resources:
   Resources:

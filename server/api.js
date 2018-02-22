@@ -5,6 +5,12 @@ const uuid = require('uuid/v4')
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
 
 const getRouter = (db) => {
+  router.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();;
+  });
+
   router.get('/markers', function (req, res) {
     const params = {
       TableName: MARKERS_TABLE
