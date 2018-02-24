@@ -31,7 +31,7 @@ custom:
       port: 9123
 
 functions:
-  api:
+  markers:
     handler: server/index.handler
     events:
       - http:
@@ -42,6 +42,23 @@ functions:
           path: /api/markers
           method: post
           cors: true
+  users:
+    handler: server/index.handler
+    events:
+      - http:
+          path: /api/users
+          method: post
+          cors:
+            origins:
+              - http://localhost
+              - https://deevjjctzmtc1.cloudfront.net
+      - http:
+          path: /api/users
+          method: get
+          cors:
+            origins:
+              - http://localhost
+              - https://deevjjctzmtc1.cloudfront.net
 
 resources:
   Resources:
