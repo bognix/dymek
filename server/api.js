@@ -79,16 +79,18 @@ const getRouter = (db) => {
     }
 
     const id = uuid()
+    const createdAt = new Date().toISOString()
+
     const params = {
       TableName: MARKERS_TABLE,
-      Item: {id, latitude: latitudeNum, longitude: longitudeNum, userId, createdAt: new Date()},
+      Item: {id, latitude: latitudeNum, longitude: longitudeNum, userId, createdAt},
     };
 
     db.put(params, (error, item) => {
       if (error) {
         res.status(400).json({ error: 'Could not create marker' });
       }
-      res.json({ id, latitude, longitude, userId, createdAt: new Date().toISOString() });
+      res.json({ id, latitude, longitude, userId, createdAt });
     });
   })
 
