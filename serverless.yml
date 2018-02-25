@@ -37,11 +37,31 @@ functions:
       - http:
           path: /api/markers
           method: get
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - x-dymek-user-id
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
       - http:
           path: /api/markers
           method: post
-          cors: true
+          cors:
+            origins:
+              - '*'
+            headers:
+              - x-dymek-user-id
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+    allowCredentials: false
+
 
 resources:
   Resources:
