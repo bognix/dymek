@@ -88,7 +88,7 @@ const getRouter = (db) => {
       if (error) {
         res.status(400).json({ error: 'Could not create marker' });
       }
-      res.json({ id, latitude, longitude, userId, createdAt: new Date() });
+      res.json({ id, latitude, longitude, userId, createdAt: new Date().toISOString() });
     });
   })
 
