@@ -1,8 +1,23 @@
 const express = require('express')
 const router = express.Router();
 const uuid = require('uuid/v4')
+const graphqlHTTP = require('express-graphql');
+const { buildSchema } = require('graphql');
 
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
+
+const schema = buildSchema(`
+  type Query {
+    markers(userId: String): [Marker!]!
+  }
+  type Marker {
+    userId: ID! @unique
+    id: ID! @unique
+    latitude: Float!
+    longitude: Float!
+    time: String!
+  }
+`)
 
 const getRouter = (db) => {
   router.use((req, res, next) => {
@@ -11,88 +26,100 @@ const getRouter = (db) => {
     next();;
   });
 
-  router.get('/markers', function (req, res) {
-    const params = {
-      TableName: MARKERS_TABLE
+  const root = {
+    markers: function(args) {
+      return new Promise ((resolve, reject) => {
+        const params = {
+          TableName: MARKERS_TABLE,
+          FilterExpression: "userId=:userId",
+          ExpressionAttributeValues: {
+              ":userId": args.userId
+          }
+        }
+
+        db.scan(params, (error, result) => {
+          if (error) {
+            console.log(error);
+            return reject({ error: 'Could not get markers' })
+          }
+
+          if (result && result.Items) {
+            return resolve(result.Items)
+          }
+
+          console.log(error);
+          return reject({ error: 'Could not get markers' })
+        });
+      })
     }
+  }
 
-    db.scan(params, (error, result) => {
-      if (error) {
-        console.log(error);
-        return res.status(400).json({ error: 'Could not get markers' });
-      }
+  router.use('/markers', graphqlHTTP({
+    schema: schema,
+    graphiql: true,
+    rootValue: root
+  }))
 
-      if (result && result.Items) {
-        return res.json({ items: result.Items, meta: {
-          total: result.Count
-        } });
-      }
+  // router.get('/markers/:markerId', function (req, res) {
+  //   if (!req.params.markerId) {
+  //     return res.status(400).json({error: 'Marker ID not set'})
+  //   }
 
-      console.log(error);
-      return res.status(400).json({ error: 'Could not get markers' });
-    });
-  })
+  // const params = {
+  //   TableName: MARKERS_TABLE,
+  //   Key: {
+  //     id: req.params.markerId,
+  //   },
+  // }
 
-  router.get('/markers/:markerId', function (req, res) {
-    if (!req.params.markerId) {
-      return res.status(400).json({error: 'Marker ID not set'})
-    }
+  // db.get(params, (error, result) => {
+  //   if (error) {
+  //     console.log(error);
+  //     return res.status(400).json({ error: 'Could not get marker' });
+  //   }
+  //   if (result && result.Item) {
+  //     const {content, id} = result.Item;
+  //     return res.json({ content, id });
+  //   } else {
+  //     return res.status(404).json({ error: 'Marker not found' });
+  //   }
+  // });
+  // })
 
-    const params = {
-      TableName: MARKERS_TABLE,
-      Key: {
-        id: req.params.markerId,
-      },
-    }
+  // router.post('/markers', function (req, res) {
+  //   const { latitude, longitude } = req.body;
+  //   if (!latitude || !longitude) {
+  //     return res.status(400).json({ error: 'Lat or Long not set' });
+  //   }
 
-    db.get(params, (error, result) => {
-      if (error) {
-        console.log(error);
-        return res.status(400).json({ error: 'Could not get marker' });
-      }
-      if (result && result.Item) {
-        const {content, id} = result.Item;
-        return res.json({ content, id });
-      } else {
-        return res.status(404).json({ error: 'Marker not found' });
-      }
-    });
-  })
+  //   const latitudeNum = Number(latitude);
+  //   const longitudeNum = Number(longitude);
 
-  router.post('/markers', function (req, res) {
-    const { latitude, longitude } = req.body;
-    if (!latitude || !longitude) {
-      return res.status(400).json({ error: 'Lat or Long not set' });
-    }
+  //   if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
+  //     return res.status(400).json({ error: 'Lat or Long has invalid form' });
+  //   }
 
-    const latitudeNum = Number(latitude);
-    const longitudeNum = Number(longitude);
+  //   const userId = req.headers['x-dymek-user-id']
 
-    if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
-      return res.status(400).json({ error: 'Lat or Long has invalid form' });
-    }
+  //   if (!userId) {
+  //     return res.status(401).json({ error: 'You can not post markers as not identified user' });
+  //   }
 
-    const userId = req.headers['x-dymek-user-id']
+  //   const id = uuid()
+  //   const createdAt = new Date().toISOString()
 
-    if (!userId) {
-      return res.status(401).json({ error: 'You can not post markers as not identified user' });
-    }
+  //   const params = {
+  //     TableName: MARKERS_TABLE,
+  //     Item: {id, latitude: latitudeNum, longitude: longitudeNum, userId, createdAt},
+  //   };
 
-    const id = uuid()
-    const createdAt = new Date().toISOString()
-
-    const params = {
-      TableName: MARKERS_TABLE,
-      Item: {id, latitude: latitudeNum, longitude: longitudeNum, userId, createdAt},
-    };
-
-    db.put(params, (error, item) => {
-      if (error) {
-        res.status(400).json({ error: 'Could not create marker' });
-      }
-      res.json({ id, latitude, longitude, userId, createdAt });
-    });
-  })
+  //   db.put(params, (error, item) => {
+  //     if (error) {
+  //       res.status(400).json({ error: 'Could not create marker' });
+  //     }
+  //     res.json({ id, latitude, longitude, userId, createdAt });
+  //   });
+  // })
 
   return router
 }
