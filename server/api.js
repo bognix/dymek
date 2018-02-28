@@ -56,7 +56,7 @@ const getRouter = (db) => {
         db.scan(params, (error, result) => {
           if (error) {
             console.log(error);
-            return reject({ error: 'Could not get markers' })
+            return reject('Could not get markers')
           }
 
           if (result && result.Items) {
@@ -64,29 +64,30 @@ const getRouter = (db) => {
           }
 
           console.log(error);
-          return reject({ error: 'Could not get markers' })
+          return reject('Could not get markers')
         });
       })
     },
-    createMarker({input}) {
+    createMarker({input}, {req, res}) {
+      console.log(req.headers)
       return new Promise((resolve, reject) => {
         const { latitude, longitude } = input;
         if (!latitude || !longitude) {
-          return reject({ error: 'Lat or Long not set' });
+          return reject('Lat or Long not set');
         }
 
         const latitudeNum = Number(latitude);
         const longitudeNum = Number(longitude);
 
         if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
-          return reject({ error: 'Lat or Long has invalid form' });
+          return reject('Lat or Long has invalid form');
         }
 
-        // const userId = req.headers['x-dymek-user-id']
+        const userId = req.headers['x-dymek-user-id']
 
-        // if (!userId) {
-        //   return res.status(401).json({ error: 'You can not post markers as not identified user' });
-        // }
+        if (!userId) {
+          return reject('You can not post markers as not identified user');
+        }
 
         const id = uuid()
         const createdAt = new Date().toISOString()
@@ -98,7 +99,7 @@ const getRouter = (db) => {
 
         db.put(params, (error, item) => {
           if (error) {
-            reject.json({ error: 'Could not create marker' });
+            reject.json('Could not create marker');
           }
           resolve({ id, latitude, longitude, userId: '123', createdAt });
         });
@@ -106,11 +107,12 @@ const getRouter = (db) => {
     }
   }
 
-  router.use('/markers', graphqlHTTP({
+  router.use('/markers', (req, res) => graphqlHTTP({
     schema: schema,
     graphiql: true,
-    rootValue: root
-  }))
+    rootValue: root,
+    context: {req, res}
+  })(req, res))
 
 
   return router
