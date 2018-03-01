@@ -36,7 +36,6 @@ const getRouter = (db) => {
   const root = {
     markers: function({userId}) {
       return new Promise ((resolve, reject) => {
-        // return reject('bla')
         let FilterExpression = '';
         let ExpressionAttributeValues = {}
         if (userId) {
@@ -57,7 +56,7 @@ const getRouter = (db) => {
         db.scan(params, (error, result) => {
           if (error) {
             console.log(error);
-            return reject('Could not get markers')
+            throw new Error('Could not get markers')
           }
 
           if (result && result.Items) {
@@ -65,7 +64,7 @@ const getRouter = (db) => {
           }
 
           console.log(error);
-          return reject('Could not get markers')
+          throw new Error('Could not get markers')
         });
       })
     },
@@ -73,20 +72,20 @@ const getRouter = (db) => {
       return new Promise((resolve, reject) => {
         const { latitude, longitude } = input;
         if (!latitude || !longitude) {
-          return reject('Lat or Long not set');
+          throw new Error('Lat or Long not set');
         }
 
         const latitudeNum = Number(latitude);
         const longitudeNum = Number(longitude);
 
         if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
-          return reject('Lat or Long has invalid form');
+          throw new Error('Lat or Long has invalid form');
         }
 
         const userId = req.headers['x-dymek-user-id']
 
         if (!userId) {
-          return reject('You can not post markers as not identified user');
+          throw new Error('You can not post markers as not identified user');
         }
 
         const id = uuid()
