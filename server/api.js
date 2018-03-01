@@ -15,11 +15,11 @@ type Query {
   markers(userId: String): [Marker!]!
 }
 type Marker {
-  userId: ID! @unique
+  userId: ID @unique
   id: ID! @unique
-  latitude: Float!
-  longitude: Float!
-  createdAt: String!
+  latitude: Float
+  longitude: Float
+  createdAt: String
 }
 type Mutation {
   createMarker(input: MarkerInput): Marker
