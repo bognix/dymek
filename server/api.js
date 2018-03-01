@@ -36,6 +36,7 @@ const getRouter = (db) => {
   const root = {
     markers: function({userId}) {
       return new Promise ((resolve, reject) => {
+        return reject()
         let FilterExpression = '';
         let ExpressionAttributeValues = {}
         if (userId) {
@@ -69,7 +70,6 @@ const getRouter = (db) => {
       })
     },
     createMarker({input}, {req, res}) {
-      console.log(req.headers)
       return new Promise((resolve, reject) => {
         const { latitude, longitude } = input;
         if (!latitude || !longitude) {
