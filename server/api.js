@@ -36,7 +36,7 @@ const getRouter = (db) => {
   const root = {
     markers: function({userId}) {
       return new Promise ((resolve, reject) => {
-        return reject()
+        // return reject('bla')
         let FilterExpression = '';
         let ExpressionAttributeValues = {}
         if (userId) {
