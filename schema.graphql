@@ -1,0 +1,80 @@
+# source: http://localhost:3000/api/markers
+# timestamp: Fri Mar 02 2018 10:01:07 GMT+0100 (CET)
+
+schema {
+  query: Root
+  mutation: Mutation
+}
+
+input CreateMarkerInput {
+  latitude: Float!
+  longitude: Float!
+  clientMutationId: String
+}
+
+type CreateMarkerPayload {
+  markerEdge: MarkerEdge
+  clientMutationId: String
+}
+
+type Marker implements Node {
+  """The ID of an object"""
+  id: ID!
+  latitude: Float
+  longitude: Float
+  createdAt: String
+  userId: ID
+}
+
+"""A connection to a list of items."""
+type MarkerConnection {
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """A list of edges."""
+  edges: [MarkerEdge]
+}
+
+"""An edge in a connection."""
+type MarkerEdge {
+  """The item at the end of the edge"""
+  node: Marker
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
+type Mutation {
+  createMarker(input: CreateMarkerInput!): CreateMarkerPayload
+}
+
+"""An object with an ID"""
+interface Node {
+  """The id of the object."""
+  id: ID!
+}
+
+"""Information about pagination in a connection."""
+type PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+
+  """When paginating backwards, the cursor to continue."""
+  startCursor: String
+
+  """When paginating forwards, the cursor to continue."""
+  endCursor: String
+}
+
+type Root {
+  markers(userId: ID, after: String, first: Int, before: String, last: Int): MarkerConnection
+
+  """Fetches an object given its ID"""
+  node(
+    """The ID of an object"""
+    id: ID!
+  ): Node
+}
