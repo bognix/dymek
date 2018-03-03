@@ -19,16 +19,16 @@ class Marker {}
 
 function getMarker(id) {
   return new Promise((resolve, reject) => {
-    dynamoDb.getItem({
+    dynamoDb.get({
+      TableName: MARKERS_TABLE,
       Key: {
-        "id": {
-          S: id
-        }
+        id: id
       }
     }, (err, data) => {
       if (err) {
         console.log(err);
-        throw new Error(err);
+        return reject();
+        // throw new Error(`Could not get marker with id: ${id}`);
       }
       console.log(data);
       resolve(data)
@@ -65,7 +65,7 @@ function createMarker(latitude, longitude, userId = '123') {
       if (error) {
         throw new Error('Could not create marker');
       }
-      resolve({ id, latitude, longitude, userId, createdAt });
+      return resolve({ id, latitude, longitude, userId, createdAt });
     });
   })
 }

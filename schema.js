@@ -13,8 +13,9 @@ const {
   const {
     connectionArgs,
     connectionDefinitions,
-    connectionFromArray,
+    connectionFromPromisedArray,
     cursorForObjectInConnection,
+    offsetToCursor,
     fromGlobalId,
     globalIdField,
     mutationWithClientMutationId,
@@ -25,6 +26,7 @@ const {
   const {
     Marker,
     getMarkers,
+    getMarker,
     createMarker
   } = require('./database');
 
@@ -47,7 +49,10 @@ const {
   const GraphQLMarker = new GraphQLObjectType({
     name: 'Marker',
     fields: {
-      id: globalIdField('Marker'),
+      id: {
+        type: new GraphQLNonNull(GraphQLID),
+        resolve: (obj) => obj.id
+      },
       latitude: {
         type: GraphQLFloat,
         resolve: (obj) => obj.latitude,
@@ -86,7 +91,7 @@ const {
         type: MarkersConnection,
         args: argsWithUserId,
         resolve: (obj, args) => {
-          return getMarkers(args.userId).then(items => connectionFromArray(items, args))
+          return connectionFromPromisedArray(getMarkers(args.userId), args)
         }
       },
       node: nodeField,
@@ -102,18 +107,25 @@ const {
     outputFields: {
       markerEdge: {
         type: GraphQLMarkerEdge,
-        resolve: ({localMarkerId}) => {
-          const marker = getMarker(localMarkerId);
-          return {
-            cursor: cursorForObjectInConnection(getMarkers(), marker),
-            node: marker,
-          };
+        resolve: (marker) => {
+          return getMarkers()
+            .then(markers => {
+              return Promise.resolve({
+                cursor: offsetToCursor(markers.findIndex((m => m.id === marker.id))),
+                node: marker
+              })
+            }).catch(err => {
+              console.log(err)
+              throw new Error(err);
+            });
         },
       }
     },
     mutateAndGetPayload: ({longitude, latitude}) => {
-      const localMarkerId = createMarker(latitude, longitude);
-      return {localMarkerId};
+      return createMarker(latitude, longitude)
+        .then(marker => {
+          return Promise.resolve(marker)
+        });
     },
   });
 
