@@ -27,16 +27,14 @@ function getMarker(id) {
     }, (err, data) => {
       if (err) {
         console.log(err);
-        return reject();
-        // throw new Error(`Could not get marker with id: ${id}`);
+        throw new Error(`Could not get marker with id: ${id}`);
       }
-      console.log(data);
       resolve(data)
     })
   })
 }
 
-function createMarker(latitude, longitude, userId = '123') {
+function createMarker(latitude, longitude, userId) {
   return new Promise((resolve, reject) => {
     if (!latitude || !longitude) {
       throw new Error('Lat or Long not set');

@@ -121,8 +121,8 @@ const {
         },
       }
     },
-    mutateAndGetPayload: ({longitude, latitude}) => {
-      return createMarker(latitude, longitude)
+    mutateAndGetPayload: ({longitude, latitude}, {req}) => {
+      return createMarker(latitude, longitude, req.headers['x-dymek-user-id'])
         .then(marker => {
           return Promise.resolve(marker)
         });
