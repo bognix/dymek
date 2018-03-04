@@ -2,6 +2,7 @@ service: dymek-api
 
 provider:
   name: aws
+  stage: ${opt:stage, 'dev'}
   runtime: nodejs6.10
   iamRoleStatements:
     - Effect: Allow
