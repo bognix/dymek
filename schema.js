@@ -93,9 +93,14 @@ const {
     nodeType: GraphQLMarker,
   });
 
-  const argsWithUserId = Object.assign({userId: {
-    type: GraphQLID
-  }}, connectionArgs)
+  const argsWithUserId = Object.assign({
+    userId: {
+      type: GraphQLID
+    },
+    type: {
+      type: GraphQLMarkerType
+    }
+  }, connectionArgs)
 
   const Root = new GraphQLObjectType({
     name: 'Root',
@@ -104,7 +109,7 @@ const {
         type: MarkersConnection,
         args: argsWithUserId,
         resolve: (obj, args) => {
-          return connectionFromPromisedArray(getMarkers(args.userId), args)
+          return connectionFromPromisedArray(getMarkers(args.userId, args.type), args)
         }
       },
       node: nodeField,

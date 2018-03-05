@@ -1,5 +1,5 @@
-# source: https://1t8rff8ana.execute-api.eu-central-1.amazonaws.com/dev/api/markers
-# timestamp: Mon Mar 05 2018 09:02:51 GMT+0100 (CET)
+# source: http://localhost:3000/api/markers
+# timestamp: Mon Mar 05 2018 20:49:41 GMT+0100 (CET)
 
 schema {
   query: Root
@@ -77,7 +77,7 @@ type PageInfo {
 }
 
 type Root {
-  markers(userId: ID, after: String, first: Int, before: String, last: Int): MarkerConnection
+  markers(userId: ID, type: MarkerType, after: String, first: Int, before: String, last: Int): MarkerConnection
 
   """Fetches an object given its ID"""
   node(

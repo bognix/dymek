@@ -67,27 +67,36 @@ function createMarker(latitude, longitude, type, userId) {
       if (error) {
         throw new Error('Could not create marker');
       }
-      return resolve({ id, latitude, longitude, userId, createdAt, type });
+      return resolve({ id, latitude, longitude, userId, createdAt, type: type });
     });
   })
 }
 
-function getMarkers(userId) {
+function getMarkers(userId, markerType) {
   return new Promise ((resolve, reject) => {
     let FilterExpression = '';
     let ExpressionAttributeValues = {}
+    let ExpressionAttributeNames = {}
     if (userId) {
       FilterExpression += "userId=:userId"
       ExpressionAttributeValues[':userId'] = userId
     }
+
+    if (markerType) {
+      ExpressionAttributeNames["#t"] = 'type'
+      FilterExpression += " #t=:type"
+      ExpressionAttributeValues[':type'] = markerType
+    }
+
     const params = {
       TableName: MARKERS_TABLE
     }
 
     if (Object.keys(ExpressionAttributeValues).length > 0) {
       Object.assign(params, {
+        ExpressionAttributeNames,
         ExpressionAttributeValues,
-        FilterExpression
+        FilterExpression,
       })
     }
 
