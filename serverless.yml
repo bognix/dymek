@@ -16,7 +16,8 @@ provider:
       Resource:
         - { "Fn::GetAtt": ["MarkersDynamoDBTable", "Arn" ] }
   environment:
-    MARKERS_TABLE: ${self:custom.tableName}
+    MARKERS_TABLE: ${self:custom.markersTableName}
+    MARKERS_TYPES_TABLE: ${self:custom.markersTypesTableName}
     DEV_DB_PORT: ${self:custom.dynamodb.start.port}
 
 plugins:
@@ -25,7 +26,8 @@ plugins:
 
 custom:
   webpackIncludeModules: true
-  tableName: 'markers-table-${self:provider.stage}'
+  markersTableName: 'markers-table-${self:provider.stage}'
+  markersTypesTableName: 'markers-types-table-${self:provider.stage}'
   dynamodb:
     start:
       migrate: true
@@ -80,4 +82,19 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-        TableName: ${self:custom.tableName}
+        TableName: ${self:custom.markersTableName}
+    MarkersTypesDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.markersTypesTableName}
