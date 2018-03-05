@@ -82,21 +82,27 @@ function getMarkers(userId, markerType) {
       ExpressionAttributeValues[':userId'] = userId
     }
 
-    if (markerType) {
-      ExpressionAttributeNames["#t"] = 'type'
-      FilterExpression += " #t=:type"
-      ExpressionAttributeValues[':type'] = markerType
-    }
+    // if (markerType) {
+    //   ExpressionAttributeNames["#t"] = 'type'
+    //   FilterExpression += " #t=:type"
+    //   ExpressionAttributeValues[':type'] = markerType
+    // }
 
     const params = {
-      TableName: MARKERS_TABLE
+      TableName: MARKERS_TABLE,
+      IndexName: "type-createdAt-index"
     }
 
     if (Object.keys(ExpressionAttributeValues).length > 0) {
       Object.assign(params, {
-        ExpressionAttributeNames,
-        ExpressionAttributeValues,
+        ExpressionAttributeNames: {
+          "#t": 'type'
+        },
+        ExpressionAttributeValues: {
+          ":type": markerType
+        },
         FilterExpression,
+        KeyConditionExpression: "#t=:type",
       })
     }
 

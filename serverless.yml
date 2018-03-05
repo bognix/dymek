@@ -75,10 +75,48 @@ resources:
           -
             AttributeName: id
             AttributeType: S
+          -
+            AttributeName: type
+            AttributeType: N
+          -
+            AttributeName: createdAt
+            AttributeType: S
+          -
+            AttributeName: userId
+            AttributeType: S
         KeySchema:
           -
             AttributeName: id
             KeyType: HASH
+        GlobalSecondaryIndexes:
+          -
+            IndexName: userId-createdAt-index
+            KeySchema:
+              -
+                AttributeName: userId
+                KeyType: HASH
+              -
+                AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          -
+            IndexName: type-createdAt-index
+            KeySchema:
+              -
+                AttributeName: type
+                KeyType: HASH
+              -
+                AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
