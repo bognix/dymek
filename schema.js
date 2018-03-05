@@ -7,7 +7,8 @@ const {
     GraphQLObjectType,
     GraphQLSchema,
     GraphQLString,
-    GraphQLFloat
+    GraphQLFloat,
+    GraphQLEnumType
   } = require('graphql');
 
   const {
@@ -46,6 +47,15 @@ const {
     }
   );
 
+  const GraphQLMarkerType = new GraphQLEnumType({
+    name: 'MarkerType',
+    values: {
+      CHIMNEY_SMOKE: { value: 0 },
+      DOG_POOP: { value: 1 },
+      ILLEGAL_PARKING: { value: 2 }
+    }
+  });
+
   const GraphQLMarker = new GraphQLObjectType({
     name: 'Marker',
     fields: {
@@ -67,6 +77,9 @@ const {
       },
       userId: {
         type: GraphQLID
+      },
+      type: {
+        type: GraphQLMarkerType
       }
     },
     interfaces: [nodeInterface],
@@ -102,7 +115,8 @@ const {
     name: 'CreateMarker',
     inputFields: {
       latitude: { type: new GraphQLNonNull(GraphQLFloat) },
-      longitude: { type: new GraphQLNonNull(GraphQLFloat) }
+      longitude: { type: new GraphQLNonNull(GraphQLFloat) },
+      type: {type: GraphQLMarkerType}
     },
     outputFields: {
       markerEdge: {
@@ -121,8 +135,9 @@ const {
         },
       }
     },
-    mutateAndGetPayload: ({longitude, latitude}, {req}) => {
-      return createMarker(latitude, longitude, req.headers['x-dymek-user-id'])
+    mutateAndGetPayload: ({longitude, latitude, type}, {req}) => {
+      const userId = req.headers['x-dymek-user-id'] || (req.body.variables.dev && '123-456')
+      return createMarker(latitude, longitude, type, userId)
         .then(marker => {
           return Promise.resolve(marker)
         });

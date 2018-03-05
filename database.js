@@ -34,7 +34,7 @@ function getMarker(id) {
   })
 }
 
-function createMarker(latitude, longitude, userId) {
+function createMarker(latitude, longitude, type, userId) {
   return new Promise((resolve, reject) => {
     if (!latitude || !longitude) {
       throw new Error('Lat or Long not set');
@@ -51,19 +51,23 @@ function createMarker(latitude, longitude, userId) {
       throw new Error('You can not post markers as not identified user');
     }
 
+    if (!type) {
+      throw new Error('You can not create marker without a type');
+    }
+
     const id = uuid()
     const createdAt = new Date().toISOString()
 
     const params = {
       TableName: MARKERS_TABLE,
-      Item: {id, latitude: latitudeNum, longitude: longitudeNum, userId, createdAt},
+      Item: {id, latitude: latitudeNum, longitude: longitudeNum, userId, createdAt, type},
     };
 
     dynamoDb.put(params, (error, item) => {
       if (error) {
         throw new Error('Could not create marker');
       }
-      return resolve({ id, latitude, longitude, userId, createdAt });
+      return resolve({ id, latitude, longitude, userId, createdAt, type });
     });
   })
 }
