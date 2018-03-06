@@ -74,51 +74,62 @@ function createMarker(latitude, longitude, type, userId) {
 
 function getMarkers(userId, markerType) {
   return new Promise ((resolve, reject) => {
-    let FilterExpression = '';
-    let ExpressionAttributeValues = {}
-    let ExpressionAttributeNames = {}
-    if (userId) {
-      FilterExpression += "userId=:userId"
-      ExpressionAttributeValues[':userId'] = userId
-    }
-
-    // if (markerType) {
-    //   ExpressionAttributeNames["#t"] = 'type'
-    //   FilterExpression += " #t=:type"
-    //   ExpressionAttributeValues[':type'] = markerType
-    // }
-
     const params = {
-      TableName: MARKERS_TABLE,
-      IndexName: "type-createdAt-index"
+      TableName: MARKERS_TABLE
+    }
+    let ExpressionAttributeNames = {}
+    let ExpressionAttributeValues = {}
+
+    // use userId-createdAt-index
+    if (userId) {
+      params.IndexName = "userId-createdAt-index"
+      ExpressionAttributeValues[':userId'] = userId
+      params.KeyConditionExpression = "userId=:userId"
     }
 
-    if (Object.keys(ExpressionAttributeValues).length > 0) {
-      Object.assign(params, {
-        ExpressionAttributeNames: {
-          "#t": 'type'
-        },
-        ExpressionAttributeValues: {
-          ":type": markerType
-        },
-        FilterExpression,
-        KeyConditionExpression: "#t=:type",
-      })
+    if (markerType) {
+      ExpressionAttributeValues[':markerType'] = markerType
+      params.FilterExpression = "#t=:markerType"
+      ExpressionAttributeNames['#t'] = 'type'
     }
 
-    dynamoDb.scan(params, (error, result) => {
-      if (error) {
+    if (Object.keys(ExpressionAttributeValues).length) {
+      params.ExpressionAttributeValues = ExpressionAttributeValues
+
+      if (Object.keys(ExpressionAttributeNames).length) {
+        params.ExpressionAttributeNames = ExpressionAttributeNames
+      }
+    }
+
+    if (params.IndexName) {
+      dynamoDb.query(params, (error, result) => {
+        if (error) {
+          console.log(error);
+          throw new Error('Could not get markers')
+        }
+
+        if (result && result.Items) {
+          return resolve(result.Items)
+        }
+
         console.log(error);
         throw new Error('Could not get markers')
-      }
+      });
+    } else {
+      dynamoDb.scan(params, (error, result) => {
+        if (error) {
+          console.log(error);
+          throw new Error('Could not get markers')
+        }
 
-      if (result && result.Items) {
-        return resolve(result.Items)
-      }
+        if (result && result.Items) {
+          return resolve(result.Items)
+        }
 
-      console.log(error);
-      throw new Error('Could not get markers')
-    });
+        console.log(error);
+        throw new Error('Could not get markers')
+      });
+    }
   })
 }
 
