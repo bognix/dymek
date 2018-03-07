@@ -56,30 +56,36 @@ const {
     }
   });
 
+  const GraphQLGeoJson = new GraphQLObjectType({
+    name: 'GeoJson',
+    fields: {
+      coordinates: {
+        type: new GraphQLList(GraphQLFloat),
+        resolve: (obj) => obj.coordinates
+      }
+    }
+  });
+
   const GraphQLMarker = new GraphQLObjectType({
     name: 'Marker',
     fields: {
       id: {
         type: new GraphQLNonNull(GraphQLID),
-        resolve: (obj) => obj.id
-      },
-      latitude: {
-        type: GraphQLFloat,
-        resolve: (obj) => obj.latitude,
-      },
-      longitude: {
-        type: GraphQLFloat,
-        resolve: (obj) => obj.longitude,
+        resolve: (obj) => obj.hashKey
       },
       createdAt: {
         type: GraphQLString,
-        resolve: (obj) => obj.createdAt,
+        resolve: (obj) => obj.rangeKey,
       },
       userId: {
         type: GraphQLID
       },
       type: {
         type: GraphQLMarkerType
+      },
+      geoJson: {
+        type: GraphQLGeoJson,
+        resolve: obj => JSON.parse(obj.geoJson)
       }
     },
     interfaces: [nodeInterface],
@@ -142,10 +148,9 @@ const {
     },
     mutateAndGetPayload: ({longitude, latitude, type}, {req}) => {
       const userId = req.headers['x-dymek-user-id'] || (req.body.variables.dev && '123-456')
-      return createMarker(latitude, longitude, type, userId)
-        .then(marker => {
-          return Promise.resolve(marker)
-        });
+      const marker = createMarker(latitude, longitude, type, userId)
+      console.log(marker)
+      return marker
     },
   });
 

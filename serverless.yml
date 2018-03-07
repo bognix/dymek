@@ -73,7 +73,13 @@ resources:
       Properties:
         AttributeDefinitions:
           -
-            AttributeName: id
+            AttributeName: hashKey
+            AttributeType: N
+          -
+              AttributeName: rangeKey
+              AttributeType: S
+          -
+            AttributeName: geohash
             AttributeType: S
           -
             AttributeName: createdAt
@@ -83,8 +89,23 @@ resources:
             AttributeType: S
         KeySchema:
           -
-            AttributeName: id
+            AttributeName: hashKey
             KeyType: HASH
+          -
+            AttributeName: rangeKey
+            KeyType: RANGE
+        LocalSecondaryIndexes:
+          -
+            IndexName: 'geohash-index'
+            KeySchema:
+              -
+                KeyType: HASH
+                AttributeName: hashKey
+              -
+                KeyType: RANGE
+                AttributeName: geohash
+            Projection:
+              ProjectionType: ALL
         GlobalSecondaryIndexes:
           -
             IndexName: userId-createdAt-index
@@ -101,6 +122,6 @@ resources:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1
         ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+          ReadCapacityUnits: 10
+          WriteCapacityUnits: 5
         TableName: ${self:custom.markersTableName}

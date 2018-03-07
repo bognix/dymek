@@ -1,9 +1,10 @@
 const AWS = require('aws-sdk');
 const uuid = require('uuid/v4')
+const ddbGeo = require('dynamodb-geo');
 
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
-const IS_OFFLINE = process.env.IS_OFFLINE;
 const DEV_DB_PORT = process.env.DEV_DB_PORT
+const IS_OFFLINE = process.env.IS_OFFLINE;
 
 let dynamoDb
 if (IS_OFFLINE === 'true') {
@@ -14,6 +15,10 @@ if (IS_OFFLINE === 'true') {
 } else {
   dynamoDb = new AWS.DynamoDB.DocumentClient();
 }
+
+const config = new ddbGeo.GeoDataManagerConfiguration(dynamoDb, MARKERS_TABLE);
+config.longitudeFirst = true;
+const markersGeoTableManager = new ddbGeo.GeoDataManager(config);
 
 class Marker {}
 
@@ -35,6 +40,30 @@ function getMarker(id) {
 }
 
 function createMarker(latitude, longitude, type, userId) {
+  const createdAt = new Date().toISOString()
+
+  const latitudeNum = Number(latitude);
+    const longitudeNum = Number(longitude);
+
+    if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
+      throw new Error('Lat or Long has invalid form');
+  }
+
+  return markersGeoTableManager.putPoint({
+    RangeKeyValue: { S: createdAt }, // Use this to ensure uniqueness of the hash/range pairs.
+    GeoPoint: { // An object specifying latitutde and longitude as plain numbers. Used to build the geohash, the hashkey and geojson data
+      latitude: latitudeNum,
+      longitude: longitudeNum
+    },
+    PutItemInput: { // Passed through to the underlying DynamoDB.putItem request. TableName is filled in for you.
+      Item: { // The primary key, geohash and geojson data is filled in for you
+        userId: { S: userId }, // Specify attribute values using { type: value } objects, like the DynamoDB API.
+        // type: { N: type },
+        // craetedAt: { S: createdAt }
+      }
+    }
+  })
+
   return new Promise((resolve, reject) => {
     if (!latitude || !longitude) {
       throw new Error('Lat or Long not set');
