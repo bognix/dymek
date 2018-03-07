@@ -76,9 +76,6 @@ resources:
             AttributeName: id
             AttributeType: S
           -
-            AttributeName: type
-            AttributeType: N
-          -
             AttributeName: createdAt
             AttributeType: S
           -
