@@ -14,10 +14,12 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
       Resource:
-        - { "Fn::GetAtt": ["MarkersDynamoDBTable", "Arn" ] }
+        - { Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }
+        - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/geohash-index' ] ]}
+        - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/id-index' ] ]}
+        - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/userId-createdAt-index' ] ]}
   environment:
     MARKERS_TABLE: ${self:custom.markersTableName}
-    MARKERS_TYPES_TABLE: ${self:custom.markersTypesTableName}
     DEV_DB_PORT: ${self:custom.dynamodb.start.port}
 
 plugins:
@@ -25,9 +27,8 @@ plugins:
   - serverless-offline
 
 custom:
-  webpackIncludeModules: true
-  markersTableName: 'markers-table-${self:provider.stage}'
-  markersTypesTableName: 'markers-types-table-${self:provider.stage}'
+  markersTableName: 'markers-table-${self:provider.stage}-geo'
+  tableResource: { "Fn::GetAtt": ["MarkersDynamoDBTable", "Arn" ] }
   dynamodb:
     start:
       migrate: true

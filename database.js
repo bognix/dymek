@@ -125,13 +125,14 @@ function getMarkers({userId, markerType, location}, internal) {
       params.IndexName = "userId-createdAt-index"
       ExpressionAttributeValues[':userId'] = userId
       params.KeyConditionExpression = "userId=:userId"
+
+      if (markerType) {
+        ExpressionAttributeValues[':markerType'] = markerType
+        params.FilterExpression = "#t=:markerType"
+        ExpressionAttributeNames['#t'] = 'type'
+      }
     }
 
-    if (markerType) {
-      ExpressionAttributeValues[':markerType'] = markerType
-      params.FilterExpression = "#t=:markerType"
-      ExpressionAttributeNames['#t'] = 'type'
-    }
 
     if (Object.keys(ExpressionAttributeValues).length) {
       params.ExpressionAttributeValues = ExpressionAttributeValues
@@ -163,7 +164,7 @@ function getMarkers({userId, markerType, location}, internal) {
       })
     }
 
-    reject('oops');
+    return reject('oops, query not supported');
   })
 }
 
