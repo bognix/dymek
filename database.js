@@ -40,7 +40,8 @@ function getMarker(id) {
     KeyConditionExpression: 'id=:id',
     Limit: 1
   }).promise().then(({Items}) => {
-    return Items[0]
+    const marker = new Marker()
+    return Object.assign(marker, Items[0])
   })
 }
 
