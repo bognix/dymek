@@ -76,23 +76,23 @@ resources:
             AttributeName: hashKey
             AttributeType: N
           -
-              AttributeName: rangeKey
-              AttributeType: S
-          -
-            AttributeName: geohash
-            AttributeType: S
-          -
             AttributeName: createdAt
             AttributeType: S
           -
+            AttributeName: geohash
+            AttributeType: N
+          -
             AttributeName: userId
+            AttributeType: S
+          -
+            AttributeName: id
             AttributeType: S
         KeySchema:
           -
             AttributeName: hashKey
             KeyType: HASH
           -
-            AttributeName: rangeKey
+            AttributeName: createdAt
             KeyType: RANGE
         LocalSecondaryIndexes:
           -
@@ -116,6 +116,17 @@ resources:
               -
                 AttributeName: createdAt
                 KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          -
+            IndexName: id-index
+            KeySchema:
+              -
+                AttributeName: id
+                KeyType: HASH
             Projection:
               ProjectionType: ALL
             ProvisionedThroughput:

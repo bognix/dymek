@@ -7,107 +7,118 @@ const DEV_DB_PORT = process.env.DEV_DB_PORT
 const IS_OFFLINE = process.env.IS_OFFLINE;
 
 let dynamoDb
+let dynamoDbClient
 if (IS_OFFLINE === 'true') {
-  dynamoDb = new AWS.DynamoDB.DocumentClient({
+  dynamoDb = new AWS.DynamoDB({
+    region: 'localhost',
+    endpoint: new AWS.Endpoint(`http://localhost:${DEV_DB_PORT}`)
+  })
+  dynamoDbClient = new AWS.DynamoDB.DocumentClient({
     region: 'localhost',
     endpoint: `http://localhost:${DEV_DB_PORT}`
   })
 } else {
-  dynamoDb = new AWS.DynamoDB.DocumentClient();
+  dynamoDb = new AWS.DynamoDB();
+  dynamoDbClient = new AWS.DynamoDB.DocumentClient()
 }
 
 const config = new ddbGeo.GeoDataManagerConfiguration(dynamoDb, MARKERS_TABLE);
 config.longitudeFirst = true;
+config.hashKeyLength = 5;
+config.rangeKeyAttributeName = 'createdAt'
 const markersGeoTableManager = new ddbGeo.GeoDataManager(config);
 
 class Marker {}
 
 function getMarker(id) {
-  return new Promise((resolve, reject) => {
-    dynamoDb.get({
-      TableName: MARKERS_TABLE,
-      Key: {
-        id: id
-      }
-    }, (err, data) => {
-      if (err) {
-        console.log(err);
-        throw new Error(`Could not get marker with id: ${id}`);
-      }
-      resolve(data)
-    })
+  return dynamoDbClient.query({
+    TableName: MARKERS_TABLE,
+    IndexName: 'id-index',
+    ExpressionAttributeValues: {
+      ':id': id
+    },
+    KeyConditionExpression: 'id=:id',
+    Limit: 1
+  }).promise().then(({Items}) => {
+    return Items[0]
   })
 }
 
 function createMarker(latitude, longitude, type, userId) {
   const createdAt = new Date().toISOString()
+  const id = uuid();
+
+  if (!latitude || !longitude) {
+    throw new Error('Lat or Long not set');
+  }
 
   const latitudeNum = Number(latitude);
-    const longitudeNum = Number(longitude);
+  const longitudeNum = Number(longitude);
 
-    if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
-      throw new Error('Lat or Long has invalid form');
+  if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
+    throw new Error('Lat or Long has invalid form');
+  }
+
+  if (!userId) {
+    throw new Error('You can not post markers as not identified user');
+  }
+
+  if (!type) {
+    throw new Error('You can not create marker without a type');
   }
 
   return markersGeoTableManager.putPoint({
-    RangeKeyValue: { S: createdAt }, // Use this to ensure uniqueness of the hash/range pairs.
-    GeoPoint: { // An object specifying latitutde and longitude as plain numbers. Used to build the geohash, the hashkey and geojson data
-      latitude: latitudeNum,
-      longitude: longitudeNum
+    RangeKeyValue: { S: createdAt },
+    GeoPoint: {
+      latitude: latitude,
+      longitude: longitude
     },
-    PutItemInput: { // Passed through to the underlying DynamoDB.putItem request. TableName is filled in for you.
-      Item: { // The primary key, geohash and geojson data is filled in for you
-        userId: { S: userId }, // Specify attribute values using { type: value } objects, like the DynamoDB API.
-        // type: { N: type },
-        // craetedAt: { S: createdAt }
+    PutItemInput: {
+      Item: {
+        type: { N: type.toString() },
+        userId: { S: userId },
+        id: { S: id }
       }
     }
-  })
-
-  return new Promise((resolve, reject) => {
-    if (!latitude || !longitude) {
-      throw new Error('Lat or Long not set');
-    }
-
-    const latitudeNum = Number(latitude);
-    const longitudeNum = Number(longitude);
-
-    if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
-      throw new Error('Lat or Long has invalid form');
-    }
-
-    if (!userId) {
-      throw new Error('You can not post markers as not identified user');
-    }
-
-    if (!type) {
-      throw new Error('You can not create marker without a type');
-    }
-
-    const id = uuid()
-    const createdAt = new Date().toISOString()
-
-    const params = {
-      TableName: MARKERS_TABLE,
-      Item: {id, latitude: latitudeNum, longitude: longitudeNum, userId, createdAt, type},
-    };
-
-    dynamoDb.put(params, (error, item) => {
-      if (error) {
-        throw new Error('Could not create marker');
-      }
-      return resolve({ id, latitude, longitude, userId, createdAt, type: type });
-    });
-  })
+  }).promise().then(() => getMarker(id))
 }
 
-function getMarkers(userId, markerType) {
+function getMarkers({userId, markerType, location}, internal) {
   return new Promise ((resolve, reject) => {
+    if (!location && !userId && !markerType && !internal) {
+      throw new Error('You need to provide at least one filter')
+      return reject();
+    }
     const params = {
       TableName: MARKERS_TABLE
     }
     let ExpressionAttributeNames = {}
     let ExpressionAttributeValues = {}
+
+    if (location) {
+      return markersGeoTableManager.queryRadius({
+        RadiusInMeter: location.radius,
+        CenterPoint: {
+          latitude: location.latitude,
+          longitude: location.longitude
+        }
+      })
+      .then((items) => {
+        let filteredItems = items;
+        if (userId) {
+          filteredItems = filteredItems.filter(item => {
+            return item.userId.S === userId
+          })
+        }
+
+        if (markerType) {
+          filteredItems = filteredItems.filter(item => {
+            return item.type.N === markerType.toString()
+          })
+        }
+        return resolve(filteredItems.map(item => AWS.DynamoDB.Converter.unmarshall(item)))
+      });
+    }
 
     // use userId-createdAt-index
     if (userId) {
@@ -131,10 +142,10 @@ function getMarkers(userId, markerType) {
     }
 
     if (params.IndexName) {
-      dynamoDb.query(params, (error, result) => {
+      return dynamoDbClient.query(params, (error, result) => {
         if (error) {
           console.log(error);
-          throw new Error('Could not get markers')
+          return reject('Could not get markers')
         }
 
         if (result && result.Items) {
@@ -142,23 +153,17 @@ function getMarkers(userId, markerType) {
         }
 
         console.log(error);
-        throw new Error('Could not get markers')
-      });
-    } else {
-      dynamoDb.scan(params, (error, result) => {
-        if (error) {
-          console.log(error);
-          throw new Error('Could not get markers')
-        }
-
-        if (result && result.Items) {
-          return resolve(result.Items)
-        }
-
-        console.log(error);
-        throw new Error('Could not get markers')
+        return reject('Could not get markers')
       });
     }
+
+    if (internal) {
+      return dynamoDbClient.scan(params, (error, result) => {
+        return resolve(result.Items)
+      })
+    }
+
+    reject('oops');
   })
 }
 

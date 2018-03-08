@@ -1,5 +1,5 @@
 # source: http://localhost:3000/api/markers
-# timestamp: Mon Mar 05 2018 20:49:41 GMT+0100 (CET)
+# timestamp: Thu Mar 08 2018 10:04:31 GMT+0100 (CET)
 
 schema {
   query: Root
@@ -18,13 +18,19 @@ type CreateMarkerPayload {
   clientMutationId: String
 }
 
-type Marker implements Node {
-  id: ID!
+type geo {
   latitude: Float
   longitude: Float
+}
+
+type Marker implements Node {
+  id: ID!
   createdAt: String
   userId: ID
   type: MarkerType
+  geoJson: geo
+  hashKey: String
+  geoHash: String
 }
 
 """A connection to a list of items."""
@@ -76,8 +82,14 @@ type PageInfo {
   endCursor: String
 }
 
+input QueryRadius {
+  radius: Int
+  latitude: Float
+  longitude: Float
+}
+
 type Root {
-  markers(userId: ID, type: MarkerType, after: String, first: Int, before: String, last: Int): MarkerConnection
+  markers(userId: ID, type: MarkerType, location: QueryRadius, after: String, first: Int, before: String, last: Int): MarkerConnection
 
   """Fetches an object given its ID"""
   node(

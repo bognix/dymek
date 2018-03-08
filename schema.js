@@ -5,6 +5,7 @@ const {
     GraphQLList,
     GraphQLNonNull,
     GraphQLObjectType,
+    GraphQLInputObjectType,
     GraphQLSchema,
     GraphQLString,
     GraphQLFloat,
@@ -57,25 +58,40 @@ const {
   });
 
   const GraphQLGeoJson = new GraphQLObjectType({
-    name: 'GeoJson',
+    name: 'geo',
     fields: {
-      coordinates: {
-        type: new GraphQLList(GraphQLFloat),
-        resolve: (obj) => obj.coordinates
+      latitude: {
+        type: GraphQLFloat,
+        resolve: obj => obj.coordinates[1]
+      },
+      longitude: {
+        type: GraphQLFloat,
+        resolve: obj => obj.coordinates[0]
       }
     }
   });
+
+  const GraphQLQueryRadius = new GraphQLInputObjectType({
+    name: 'QueryRadius',
+    fields: {
+      radius: {
+        type: GraphQLInt
+      },
+      latitude: {type: GraphQLFloat},
+      longitude: {type: GraphQLFloat}
+    }
+  })
 
   const GraphQLMarker = new GraphQLObjectType({
     name: 'Marker',
     fields: {
       id: {
         type: new GraphQLNonNull(GraphQLID),
-        resolve: (obj) => obj.hashKey
+        resolve: (obj) => toGlobalId(obj.id)
       },
       createdAt: {
         type: GraphQLString,
-        resolve: (obj) => obj.rangeKey,
+        resolve: (obj) => obj.createdAt,
       },
       userId: {
         type: GraphQLID
@@ -85,7 +101,17 @@ const {
       },
       geoJson: {
         type: GraphQLGeoJson,
-        resolve: obj => JSON.parse(obj.geoJson)
+        resolve: obj => {
+          return JSON.parse(obj.geoJson)
+        }
+      },
+      hashKey: {
+        type: GraphQLString,
+        resolve: obj => obj.hashKey
+      },
+      geoHash: {
+        type: GraphQLString,
+        resolve: obj => obj.geohash
       }
     },
     interfaces: [nodeInterface],
@@ -99,12 +125,15 @@ const {
     nodeType: GraphQLMarker,
   });
 
-  const argsWithUserId = Object.assign({
+  const markerQueryArgs = Object.assign({
     userId: {
       type: GraphQLID
     },
     type: {
       type: GraphQLMarkerType
+    },
+    location: {
+      type: GraphQLQueryRadius
     }
   }, connectionArgs)
 
@@ -113,9 +142,9 @@ const {
     fields: {
       markers: {
         type: MarkersConnection,
-        args: argsWithUserId,
+        args: markerQueryArgs,
         resolve: (obj, args) => {
-          return connectionFromPromisedArray(getMarkers(args.userId, args.type), args)
+          return connectionFromPromisedArray(getMarkers({userId: args.userId, markerType: args.type, location: args.location}), args)
         }
       },
       node: nodeField,
@@ -133,7 +162,7 @@ const {
       markerEdge: {
         type: GraphQLMarkerEdge,
         resolve: (marker) => {
-          return getMarkers()
+          return getMarkers({}, true)
             .then(markers => {
               return Promise.resolve({
                 cursor: offsetToCursor(markers.findIndex((m => m.id === marker.id))),
@@ -148,9 +177,7 @@ const {
     },
     mutateAndGetPayload: ({longitude, latitude, type}, {req}) => {
       const userId = req.headers['x-dymek-user-id'] || (req.body.variables.dev && '123-456')
-      const marker = createMarker(latitude, longitude, type, userId)
-      console.log(marker)
-      return marker
+      return createMarker(latitude, longitude, type, userId)
     },
   });
 
