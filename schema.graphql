@@ -1,5 +1,5 @@
 # source: http://localhost:3000/api/markers
-# timestamp: Thu Mar 08 2018 10:04:31 GMT+0100 (CET)
+# timestamp: Fri Mar 09 2018 08:10:26 GMT+0100 (CET)
 
 schema {
   query: Root
