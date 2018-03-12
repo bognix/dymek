@@ -106,6 +106,10 @@ function getMarkers({userId, markerType, location}, internal) {
     let ExpressionAttributeNames = {}
     let ExpressionAttributeValues = {}
 
+    if (markerType && !Object.keys(MARKERS_SUPPORTED_TYPES).includes(markerType)) {
+      throw new Error('Not supported type')
+    }
+
     if (location) {
       return markersGeoTableManager.queryRadius({
         RadiusInMeter: location.radius,
