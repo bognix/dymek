@@ -6,6 +6,12 @@ const MARKERS_TABLE = process.env.MARKERS_TABLE;
 const DEV_DB_PORT = process.env.DEV_DB_PORT
 const IS_OFFLINE = process.env.IS_OFFLINE;
 
+const MARKERS_SUPPORTED_TYPES = {
+  DOOG_POOP: 1,
+  ILLEGAL_PARKING: 2,
+  CHIMNEY_SMOKE: 3
+}
+
 let dynamoDb
 let dynamoDbClient
 if (IS_OFFLINE === 'true') {
@@ -49,6 +55,10 @@ function createMarker(latitude, longitude, type, userId) {
   const createdAt = new Date().toISOString()
   const id = uuid();
 
+  if (!Object.keys(MARKERS_SUPPORTED_TYPES).includes(type)) {
+    throw new Error('Not supported type')
+  }
+
   if (!latitude || !longitude) {
     throw new Error('Lat or Long not set');
   }
@@ -76,7 +86,7 @@ function createMarker(latitude, longitude, type, userId) {
     },
     PutItemInput: {
       Item: {
-        type: { N: type.toString() },
+        type: { N: MARKERS_SUPPORTED_TYPES[type].toString() },
         userId: { S: userId },
         id: { S: id }
       }
@@ -114,7 +124,7 @@ function getMarkers({userId, markerType, location}, internal) {
 
         if (markerType) {
           filteredItems = filteredItems.filter(item => {
-            return item.type.N === markerType.toString()
+            return item.type.N === MARKERS_SUPPORTED_TYPES[markerType].toString()
           })
         }
         return resolve(filteredItems.map(item => AWS.DynamoDB.Converter.unmarshall(item)))
@@ -128,7 +138,7 @@ function getMarkers({userId, markerType, location}, internal) {
       params.KeyConditionExpression = "userId=:userId"
 
       if (markerType) {
-        ExpressionAttributeValues[':markerType'] = markerType
+        ExpressionAttributeValues[':markerType'] = MARKERS_SUPPORTED_TYPES[markerType]
         params.FilterExpression = "#t=:markerType"
         ExpressionAttributeNames['#t'] = 'type'
       }
@@ -147,7 +157,7 @@ function getMarkers({userId, markerType, location}, internal) {
       return dynamoDbClient.query(params, (error, result) => {
         if (error) {
           console.log(error);
-          return reject('Could not get markers')
+          throw new Error('Could not get markers')
         }
 
         if (result && result.Items) {
@@ -155,7 +165,7 @@ function getMarkers({userId, markerType, location}, internal) {
         }
 
         console.log(error);
-        return reject('Could not get markers')
+        throw new Error('Could not get markers')
       });
     }
 
@@ -165,7 +175,7 @@ function getMarkers({userId, markerType, location}, internal) {
       })
     }
 
-    return reject('oops, query not supported');
+    throw new Error('oops, query not supported');
   })
 }
 
@@ -173,5 +183,6 @@ module.exports = {
   Marker,
   getMarkers,
   getMarker,
-  createMarker
+  createMarker,
+  MARKERS_SUPPORTED_TYPES
 }

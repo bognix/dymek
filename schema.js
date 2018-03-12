@@ -29,7 +29,8 @@ const {
   Marker,
   getMarkers,
   getMarker,
-  createMarker
+  createMarker,
+  MARKERS_SUPPORTED_TYPES
 } = require('./database');
 
 const {nodeInterface, nodeField} = nodeDefinitions(
@@ -47,15 +48,6 @@ const {nodeInterface, nodeField} = nodeDefinitions(
     return null;
   }
 );
-
-const GraphQLMarkerType = new GraphQLEnumType({
-  name: 'MarkerType',
-  values: {
-    CHIMNEY_SMOKE: { value: 0 },
-    DOG_POOP: { value: 1 },
-    ILLEGAL_PARKING: { value: 2 }
-  }
-});
 
 const GraphQLGeoJson = new GraphQLObjectType({
   name: 'geo',
@@ -97,7 +89,8 @@ const GraphQLMarker = new GraphQLObjectType({
       type: GraphQLID
     },
     type: {
-      type: GraphQLMarkerType
+      type: GraphQLString,
+      resolve: obj => Object.keys(MARKERS_SUPPORTED_TYPES).find(key => MARKERS_SUPPORTED_TYPES[key] == obj.type)
     },
     geoJson: {
       type: GraphQLGeoJson,
@@ -130,7 +123,7 @@ const markerQueryArgs = Object.assign({
     type: GraphQLID
   },
   type: {
-    type: GraphQLMarkerType
+    type: GraphQLString
   },
   location: {
     type: GraphQLQueryRadius
@@ -156,7 +149,7 @@ const GraphQLCreateMarkerMutation = mutationWithClientMutationId({
   inputFields: {
     latitude: { type: new GraphQLNonNull(GraphQLFloat) },
     longitude: { type: new GraphQLNonNull(GraphQLFloat) },
-    type: {type: GraphQLMarkerType}
+    type: {type: GraphQLString}
   },
   outputFields: {
     markerEdge: {
