@@ -90,7 +90,7 @@ const GraphQLMarker = new GraphQLObjectType({
     },
     type: {
       type: GraphQLString,
-      resolve: obj => Object.keys(MARKERS_SUPPORTED_TYPES).find(key => MARKERS_SUPPORTED_TYPES[key] == obj.type)
+      resolve: obj => MARKERS_SUPPORTED_TYPES[obj.type]
     },
     geoJson: {
       type: GraphQLGeoJson,
@@ -122,8 +122,8 @@ const markerQueryArgs = Object.assign({
   userId: {
     type: GraphQLID
   },
-  type: {
-    type: GraphQLString
+  types: {
+    type: new GraphQLList(GraphQLString)
   },
   location: {
     type: GraphQLQueryRadius
@@ -137,7 +137,7 @@ const Root = new GraphQLObjectType({
       type: MarkersConnection,
       args: markerQueryArgs,
       resolve: (obj, args) => {
-        return connectionFromPromisedArray(getMarkers({userId: args.userId, markerType: args.type, location: args.location}), args)
+        return connectionFromPromisedArray(getMarkers({userId: args.userId, markerTypes: args.types, location: args.location}), args)
       }
     },
     node: nodeField,

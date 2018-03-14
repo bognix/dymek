@@ -7,9 +7,9 @@ const DEV_DB_PORT = process.env.DEV_DB_PORT
 const IS_OFFLINE = process.env.IS_OFFLINE;
 
 const MARKERS_SUPPORTED_TYPES = {
-  DOOG_POOP: 1,
-  ILLEGAL_PARKING: 2,
-  CHIMNEY_SMOKE: 3
+  DOOG_POOP: 'DOOG_POOP',
+  ILLEGAL_PARKING: 'ILLEGAL_PARKING',
+  CHIMNEY_SMOKE: 'CHIMNEY_SMOKE'
 }
 
 let dynamoDb
@@ -55,7 +55,7 @@ function createMarker(latitude, longitude, type, userId) {
   const createdAt = new Date().toISOString()
   const id = uuid();
 
-  if (!Object.keys(MARKERS_SUPPORTED_TYPES).includes(type)) {
+  if (!MARKERS_SUPPORTED_TYPES[type]) {
     throw new Error('Not supported type')
   }
 
@@ -86,7 +86,7 @@ function createMarker(latitude, longitude, type, userId) {
     },
     PutItemInput: {
       Item: {
-        type: { N: MARKERS_SUPPORTED_TYPES[type].toString() },
+        type: { S: MARKERS_SUPPORTED_TYPES[type] },
         userId: { S: userId },
         id: { S: id }
       }
@@ -94,9 +94,9 @@ function createMarker(latitude, longitude, type, userId) {
   }).promise().then(() => getMarker(id))
 }
 
-function getMarkers({userId, markerType, location}, internal) {
+function getMarkers({userId, markerTypes = [], location}, internal = false) {
   return new Promise ((resolve, reject) => {
-    if (!location && !userId && !markerType && !internal) {
+    if (!location && !userId && !markerTypes.length && !internal) {
       throw new Error('You need to provide at least one filter')
       return reject();
     }
@@ -106,8 +106,8 @@ function getMarkers({userId, markerType, location}, internal) {
     let ExpressionAttributeNames = {}
     let ExpressionAttributeValues = {}
 
-    if (markerType && !Object.keys(MARKERS_SUPPORTED_TYPES).includes(markerType)) {
-      throw new Error('Not supported type')
+    if (markerTypes.length && markerTypes.find(type => !MARKERS_SUPPORTED_TYPES[type])) {
+      throw new Error('One of passed types is not supported')
     }
 
     if (location) {
@@ -126,9 +126,10 @@ function getMarkers({userId, markerType, location}, internal) {
           })
         }
 
-        if (markerType) {
+        if (markerTypes.length) {
           filteredItems = filteredItems.filter(item => {
-            return item.type.N === MARKERS_SUPPORTED_TYPES[markerType].toString()
+            const typeName = MARKERS_SUPPORTED_TYPES[item.type.S];
+            return markerTypes.includes(item.type.S)
           })
         }
         return resolve(filteredItems.map(item => AWS.DynamoDB.Converter.unmarshall(item)))
@@ -141,13 +142,14 @@ function getMarkers({userId, markerType, location}, internal) {
       ExpressionAttributeValues[':userId'] = userId
       params.KeyConditionExpression = "userId=:userId"
 
-      if (markerType) {
-        ExpressionAttributeValues[':markerType'] = MARKERS_SUPPORTED_TYPES[markerType]
-        params.FilterExpression = "#t=:markerType"
+      if (markerTypes.length) {
+        const keyVals = {};
+        markerTypes.forEach((type, index) => keyVals[`:typeValue${index}`] = type)
         ExpressionAttributeNames['#t'] = 'type'
+        params.FilterExpression = `#t in (${Object.keys(keyVals).join(', ')})`
+        ExpressionAttributeValues  = Object.assign(ExpressionAttributeValues, keyVals);
       }
     }
-
 
     if (Object.keys(ExpressionAttributeValues).length) {
       params.ExpressionAttributeValues = ExpressionAttributeValues
