@@ -12,6 +12,13 @@ const MARKERS_SUPPORTED_TYPES = {
   CHIMNEY_SMOKE: 'CHIMNEY_SMOKE'
 }
 
+const MARKERS_SUPPORTED_STATUSES = {
+  RESOLVED: 'RESOLVED',
+  ACKNOWLEDGED: 'ACKNOWLEDGED',
+  REJECTED: 'REJECTED',
+  NEW: 'NEW'
+}
+
 const config = new ddbGeo.GeoDataManagerConfiguration(dynamoDb, MARKERS_TABLE);
 config.longitudeFirst = true;
 config.hashKeyLength = 5;
@@ -76,10 +83,12 @@ function createMarker(latitude, longitude, type, userId) {
       Item: {
         type: { S: MARKERS_SUPPORTED_TYPES[type] },
         userId: { S: userId },
-        id: { S: id }
+        id: { S: id },
+        status: { S: MARKERS_SUPPORTED_STATUSES.NEW }
       }
     }
   }).promise()
+  // TODO this is temporary - figure out user registration flow
   .then(() => User.updateOrCreateUser(userId))
   .then(() => getMarker(id))
 }
@@ -175,10 +184,40 @@ function getMarkers({userId, markerTypes = [], location}, internal = false) {
   })
 }
 
+function updateMarker(id, status) {
+  if (!id) {
+    throw new Error('Pass ID in order to update marker')
+  }
+
+  if (!MARKERS_SUPPORTED_STATUSES[status]) {
+    throw new Error('Status not supported')
+  }
+
+  return getMarker(id)
+    .then(marker => {
+      return dynamoDbClient.update(
+        {
+          TableName: MARKERS_TABLE,
+          Key: {
+            'hashKey': marker.hashKey,
+            'createdAt': marker.createdAt
+          },
+          ExpressionAttributeValues: {
+            ':status': status,
+          },
+          ExpressionAttributeNames: {
+            '#s': 'status'
+          },
+          UpdateExpression: 'set #s = :status',
+        }).promise().then(() => Object.assign(marker, {status}))
+    })
+}
+
 module.exports = {
   Marker,
   getMarkers,
   getMarker,
   createMarker,
+  updateMarker,
   MARKERS_SUPPORTED_TYPES
 }

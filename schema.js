@@ -30,6 +30,7 @@ const {
   getMarkers,
   getMarker,
   createMarker,
+  updateMarker,
   MARKERS_SUPPORTED_TYPES
 } = require('./db/markers');
 
@@ -99,7 +100,7 @@ const GraphQLMarker = new GraphQLObjectType({
   fields: {
     id: {
       type: new GraphQLNonNull(GraphQLID),
-      resolve: (obj) => toGlobalId('Marker', obj.id)
+      resolve: (obj) => obj.id
     },
     createdAt: {
       type: GraphQLString,
@@ -126,6 +127,10 @@ const GraphQLMarker = new GraphQLObjectType({
     geoHash: {
       type: GraphQLString,
       resolve: obj => obj.geohash
+    },
+    status: {
+      type: GraphQLString,
+      resolve: obj => obj.status
     }
   },
   interfaces: [nodeInterface],
@@ -212,11 +217,40 @@ const GraphQLUpdateOrCreateUserMutation = mutationWithClientMutationId({
   },
 });
 
+const GraphQLUpdateMarkerMutation = mutationWithClientMutationId({
+  name: 'updateMarker',
+  inputFields: {
+    status: { type: GraphQLString },
+    id: { type: GraphQLID }
+  },
+  outputFields: {
+    markerEdge: {
+      type: GraphQLMarkerEdge,
+      resolve: (marker) => {
+        return getMarkers({}, true)
+        .then(markers => {
+          return Promise.resolve({
+            cursor: offsetToCursor(markers.findIndex((m => m.id === marker.id))),
+            node: marker
+          })
+        }).catch(err => {
+          console.log(err)
+          throw new Error(err);
+        });
+      },
+    }
+  },
+  mutateAndGetPayload: ({id, status}, {req}) => {
+    return updateMarker(id, status)
+  },
+});
+
 const Mutation = new GraphQLObjectType({
   name: 'Mutation',
   fields: {
     createMarker: GraphQLCreateMarkerMutation,
-    updateOrCreateUser: GraphQLUpdateOrCreateUserMutation
+    updateOrCreateUser: GraphQLUpdateOrCreateUserMutation,
+    updateMarker: GraphQLUpdateMarkerMutation
   },
 });
 
