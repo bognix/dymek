@@ -31,7 +31,7 @@ const {
   getMarker,
   createMarker,
   MARKERS_SUPPORTED_TYPES
-} = require('./database');
+} = require('./db/markers');
 
 const {nodeInterface, nodeField} = nodeDefinitions(
   (globalId) => {
@@ -74,6 +74,20 @@ const GraphQLQueryRadius = new GraphQLInputObjectType({
   }
 })
 
+const GraphQLUser = new GraphQLObjectType({
+  name: 'user',
+  fields: {
+    id: {
+      type: GraphQLID,
+      resolve: obj => obj.id
+    },
+    registrationToken: {
+      type: GraphQLString,
+      resolve: obj => obj.registrationToken
+    }
+  }
+});
+
 const GraphQLMarker = new GraphQLObjectType({
   name: 'Marker',
   fields: {
@@ -85,8 +99,8 @@ const GraphQLMarker = new GraphQLObjectType({
       type: GraphQLString,
       resolve: (obj) => obj.createdAt,
     },
-    userId: {
-      type: GraphQLID
+    user: {
+      type: GraphQLUser
     },
     type: {
       type: GraphQLString,

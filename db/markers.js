@@ -1,31 +1,15 @@
 const AWS = require('aws-sdk');
 const uuid = require('uuid/v4')
 const ddbGeo = require('dynamodb-geo');
+const {dynamoDb, dynamoDbClient} =  require('./index');
+const User = require('./users');
 
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
-const DEV_DB_PORT = process.env.DEV_DB_PORT
-const IS_OFFLINE = process.env.IS_OFFLINE;
 
 const MARKERS_SUPPORTED_TYPES = {
   DOOG_POOP: 'DOOG_POOP',
   ILLEGAL_PARKING: 'ILLEGAL_PARKING',
   CHIMNEY_SMOKE: 'CHIMNEY_SMOKE'
-}
-
-let dynamoDb
-let dynamoDbClient
-if (IS_OFFLINE === 'true') {
-  dynamoDb = new AWS.DynamoDB({
-    region: 'localhost',
-    endpoint: new AWS.Endpoint(`http://localhost:${DEV_DB_PORT}`)
-  })
-  dynamoDbClient = new AWS.DynamoDB.DocumentClient({
-    region: 'localhost',
-    endpoint: `http://localhost:${DEV_DB_PORT}`
-  })
-} else {
-  dynamoDb = new AWS.DynamoDB();
-  dynamoDbClient = new AWS.DynamoDB.DocumentClient()
 }
 
 const config = new ddbGeo.GeoDataManagerConfiguration(dynamoDb, MARKERS_TABLE);
@@ -45,9 +29,13 @@ function getMarker(id) {
     },
     KeyConditionExpression: 'id=:id',
     Limit: 1
-  }).promise().then(({Items}) => {
-    const marker = new Marker()
-    return Object.assign(marker, Items[0])
+  }).promise()
+    .then(({Items}) => {
+      const marker = new Marker()
+      return User.getUser(Items[0].userId)
+        .then(user => {
+          return Object.assign(marker, Items[0])
+        })
   })
 }
 

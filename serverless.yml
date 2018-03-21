@@ -15,11 +15,13 @@ provider:
         - dynamodb:DeleteItem
       Resource:
         - { Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }
+        - { Fn::GetAtt: ["UsersDynamoDBTable", "Arn"] }
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/geohash-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/id-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/userId-createdAt-index' ] ]}
   environment:
     MARKERS_TABLE: ${self:custom.markersTableName}
+    USERS_TABLE: ${self:custom.usersTableName}
     DEV_DB_PORT: ${self:custom.dynamodb.start.port}
 
 plugins:
@@ -28,7 +30,7 @@ plugins:
 
 custom:
   markersTableName: 'markers-table-${self:provider.stage}-geo'
-  tableResource: { "Fn::GetAtt": ["MarkersDynamoDBTable", "Arn" ] }
+  usersTableName: 'users-table-${self:provider.stage}'
   dynamodb:
     start:
       migrate: true
@@ -39,7 +41,7 @@ functions:
     handler: server/index.handler
     events:
       - http:
-          path: /api/markers
+          path: /api/q
           method: get
           cors:
             origins:
@@ -52,7 +54,7 @@ functions:
               - X-Api-Key
               - X-Amz-Security-Token
       - http:
-          path: /api/markers
+          path: /api/q
           method: post
           cors:
             origins:
@@ -137,3 +139,18 @@ resources:
           ReadCapacityUnits: 10
           WriteCapacityUnits: 5
         TableName: ${self:custom.markersTableName}
+    UsersDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: userId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.usersTableName}
