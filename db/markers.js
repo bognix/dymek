@@ -34,7 +34,9 @@ function getMarker(id) {
       const marker = new Marker()
       return User.getUser(Items[0].userId)
         .then(user => {
-          return Object.assign(marker, Items[0])
+          console.log(user);
+          console.log(Object.assign(marker, user, Items[0]));
+          return Object.assign(marker, {user}, Items[0])
         })
   })
 }
