@@ -7,7 +7,7 @@ const User = require('./users');
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
 
 const MARKERS_SUPPORTED_TYPES = {
-  DOOG_POOP: 'DOG_POOP',
+  DOG_POOP: 'DOG_POOP',
   ILLEGAL_PARKING: 'ILLEGAL_PARKING',
   CHIMNEY_SMOKE: 'CHIMNEY_SMOKE'
 }
@@ -34,9 +34,7 @@ function getMarker(id) {
       const marker = new Marker()
       return User.getUser(Items[0].userId)
         .then(user => {
-          console.log(user);
-          console.log(Object.assign(marker, user, Items[0]));
-          return Object.assign(marker, {user}, Items[0])
+          return Object.assign(marker, {user: Object.assign({}, user)}, Items[0])
         })
   })
 }
@@ -81,7 +79,9 @@ function createMarker(latitude, longitude, type, userId) {
         id: { S: id }
       }
     }
-  }).promise().then(() => getMarker(id))
+  }).promise()
+  .then(() => User.updateOrCreateUser(userId))
+  .then(() => getMarker(id))
 }
 
 function getMarkers({userId, markerTypes = [], location}, internal = false) {

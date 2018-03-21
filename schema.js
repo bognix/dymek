@@ -35,7 +35,8 @@ const {
 
 const  {
   User,
-  updateOrCreateUser
+  updateOrCreateUser,
+  getUser
 } = require ('./db/users');
 
 const {nodeInterface, nodeField} = nodeDefinitions(
@@ -105,7 +106,8 @@ const GraphQLMarker = new GraphQLObjectType({
       resolve: (obj) => obj.createdAt,
     },
     user: {
-      type: GraphQLUser
+      type: GraphQLUser,
+      resolve: (obj) => getUser(obj.userId)
     },
     type: {
       type: GraphQLString,
