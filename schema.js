@@ -33,6 +33,11 @@ const {
   MARKERS_SUPPORTED_TYPES
 } = require('./db/markers');
 
+const  {
+  User,
+  updateOrCreateUser
+} = require ('./db/users');
+
 const {nodeInterface, nodeField} = nodeDefinitions(
   (globalId) => {
     const {type, id} = fromGlobalId(globalId);
@@ -75,11 +80,11 @@ const GraphQLQueryRadius = new GraphQLInputObjectType({
 })
 
 const GraphQLUser = new GraphQLObjectType({
-  name: 'user',
+  name: 'User',
   fields: {
-    id: {
+    userId: {
       type: GraphQLID,
-      resolve: obj => obj.id
+      resolve: obj => obj.userId
     },
     registrationToken: {
       type: GraphQLString,
@@ -188,10 +193,28 @@ const GraphQLCreateMarkerMutation = mutationWithClientMutationId({
   },
 });
 
+const GraphQLUpdateOrCreateUserMutation = mutationWithClientMutationId({
+  name: 'UpdateOrCreateUser',
+  inputFields: {
+    registrationToken: { type: GraphQLString },
+  },
+  outputFields: {
+    user: {
+      type: GraphQLUser,
+      resolve: (user) => user,
+    }
+  },
+  mutateAndGetPayload: ({registrationToken}, {req}) => {
+    const userId = req.headers['x-dymek-user-id'] || (req.body.variables.dev && '123-456')
+    return updateOrCreateUser(userId, registrationToken)
+  },
+});
+
 const Mutation = new GraphQLObjectType({
   name: 'Mutation',
   fields: {
-    createMarker: GraphQLCreateMarkerMutation
+    createMarker: GraphQLCreateMarkerMutation,
+    updateOrCreateUser: GraphQLUpdateOrCreateUserMutation
   },
 });
 

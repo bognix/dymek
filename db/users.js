@@ -31,13 +31,12 @@ function updateOrCreateUser(id, registrationToken = null) {
     {
       TableName: USERS_TABLE,
       Key: {
-        HashKey: id
+        userId: id
       },
-      UpdateExpression: 'set registrationToken = :token, updatedAt = :date, userId = :id',
+      UpdateExpression: 'set registrationToken = :token, updatedAt = :date',
       ExpressionAttributeValues: {
         ':token': registrationToken,
-        ':date': updatedAt,
-        ':id': id
+        ':date': updatedAt
       }
     }
   ).promise().then(() => getUser(id))
