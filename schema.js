@@ -218,7 +218,7 @@ const GraphQLUpdateOrCreateUserMutation = mutationWithClientMutationId({
 });
 
 const GraphQLUpdateMarkerMutation = mutationWithClientMutationId({
-  name: 'updateMarker',
+  name: 'UpdateMarker',
   inputFields: {
     status: { type: GraphQLString },
     id: { type: GraphQLID }

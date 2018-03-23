@@ -23,6 +23,7 @@ provider:
     MARKERS_TABLE: ${self:custom.markersTableName}
     USERS_TABLE: ${self:custom.usersTableName}
     DEV_DB_PORT: ${self:custom.dynamodb.start.port}
+    GCLOUD_PROJECT: dymek-web-1519202400328
 
 plugins:
   - serverless-dynamodb-local
