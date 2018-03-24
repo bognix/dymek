@@ -3,6 +3,7 @@ const uuid = require('uuid/v4')
 const ddbGeo = require('dynamodb-geo');
 const {dynamoDb, dynamoDbClient} =  require('./index');
 const User = require('./users');
+const notifier = require('../server/notifier');
 
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
 
@@ -43,6 +44,8 @@ function getMarker(id) {
         .then(user => {
           return Object.assign(marker, {user: Object.assign({}, user)}, Items[0])
         })
+  }).catch((err) => {
+    throw new Error(err)
   })
 }
 
@@ -195,6 +198,12 @@ function updateMarker(id, status) {
 
   return getMarker(id)
     .then(marker => {
+      const oldStatus = marker.status;
+
+      if (oldStatus === status) {
+        return Promise.resolve(marker);
+      }
+
       return dynamoDbClient.update(
         {
           TableName: MARKERS_TABLE,
@@ -209,7 +218,22 @@ function updateMarker(id, status) {
             '#s': 'status'
           },
           UpdateExpression: 'set #s = :status',
-        }).promise().then(() => Object.assign(marker, {status}))
+        }).promise()
+        .then(() => {
+          return new Promise((resolve, reject) => {
+            User.getUser(marker.userId)
+              .then((user) =>  {
+                notifier.notify({
+                  token: user.registrationToken,
+                  message: {
+                    title: 'Zmiana statusu zgłoszenia',
+                    body: `Twoje zgłoszenie zmieniło status z ${oldStatus} na ${status}`
+                  }
+                })
+                return resolve(Object.assign(marker, {status}))
+            })
+          })
+        })
     })
 }
 

@@ -1,5 +1,3 @@
-const AWS = require('aws-sdk');
-const uuid = require('uuid/v4')
 const {dynamoDb, dynamoDbClient} =  require('./index');
 
 const USERS_TABLE = process.env.USERS_TABLE;
