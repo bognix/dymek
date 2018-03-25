@@ -14,12 +14,14 @@ function getUser(id) {
     Limit: 1
   }).promise().then(({Items}) => {
     const user = new User()
+    console.log('...getting user with ID....', id);
     return Object.assign(user, Items[0])
   })
 }
 
 function updateOrCreateUser(id, registrationToken = null) {
   const updatedAt = new Date().toISOString()
+  console.log(id, registrationToken, '......updateOrCreateUser....');
 
   if (!id) {
     throw new Error('Can not create user without ID')

@@ -8,12 +8,12 @@ if (!admin.apps.length) {
   });
 }
 
-const handler = (event) => {
+const handler = (event, context, callback) => {
   const payload = JSON.parse(event.Records[0].Sns.Message).event;
 
   if (!payload.token) {
     console.error('token not set.');
-    return;
+    return callback(`token not set, payload: ${JSON.stringify(payload)}`);
   }
 
   const message = {
@@ -22,9 +22,11 @@ const handler = (event) => {
   };
 
   admin.messaging().send(message)
+    .then(callback)
     .catch((error) => {
       console.error(payload);
       console.error('Error sending message:', error);
+      callback(error);
     });
 
 }
