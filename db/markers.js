@@ -1,31 +1,23 @@
 const AWS = require('aws-sdk');
 const uuid = require('uuid/v4')
 const ddbGeo = require('dynamodb-geo');
+const {dynamoDb, dynamoDbClient} =  require('./index');
+const User = require('./users');
+const notifier = require('../server/notifier');
 
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
-const DEV_DB_PORT = process.env.DEV_DB_PORT
-const IS_OFFLINE = process.env.IS_OFFLINE;
 
 const MARKERS_SUPPORTED_TYPES = {
-  DOOG_POOP: 'DOOG_POOP',
+  DOG_POOP: 'DOG_POOP',
   ILLEGAL_PARKING: 'ILLEGAL_PARKING',
   CHIMNEY_SMOKE: 'CHIMNEY_SMOKE'
 }
 
-let dynamoDb
-let dynamoDbClient
-if (IS_OFFLINE === 'true') {
-  dynamoDb = new AWS.DynamoDB({
-    region: 'localhost',
-    endpoint: new AWS.Endpoint(`http://localhost:${DEV_DB_PORT}`)
-  })
-  dynamoDbClient = new AWS.DynamoDB.DocumentClient({
-    region: 'localhost',
-    endpoint: `http://localhost:${DEV_DB_PORT}`
-  })
-} else {
-  dynamoDb = new AWS.DynamoDB();
-  dynamoDbClient = new AWS.DynamoDB.DocumentClient()
+const MARKERS_SUPPORTED_STATUSES = {
+  RESOLVED: 'RESOLVED',
+  ACKNOWLEDGED: 'ACKNOWLEDGED',
+  REJECTED: 'REJECTED',
+  NEW: 'NEW'
 }
 
 const config = new ddbGeo.GeoDataManagerConfiguration(dynamoDb, MARKERS_TABLE);
@@ -45,9 +37,15 @@ function getMarker(id) {
     },
     KeyConditionExpression: 'id=:id',
     Limit: 1
-  }).promise().then(({Items}) => {
-    const marker = new Marker()
-    return Object.assign(marker, Items[0])
+  }).promise()
+    .then(({Items}) => {
+      const marker = new Marker()
+      return User.getUser(Items[0].userId)
+        .then(user => {
+          return Object.assign(marker, {user: Object.assign({}, user)}, Items[0])
+        })
+  }).catch((err) => {
+    throw new Error(err)
   })
 }
 
@@ -88,10 +86,12 @@ function createMarker(latitude, longitude, type, userId) {
       Item: {
         type: { S: MARKERS_SUPPORTED_TYPES[type] },
         userId: { S: userId },
-        id: { S: id }
+        id: { S: id },
+        status: { S: MARKERS_SUPPORTED_STATUSES.NEW }
       }
     }
-  }).promise().then(() => getMarker(id))
+  }).promise()
+  .then(() => getMarker(id))
 }
 
 function getMarkers({userId, markerTypes = [], location}, internal = false) {
@@ -185,10 +185,62 @@ function getMarkers({userId, markerTypes = [], location}, internal = false) {
   })
 }
 
+function updateMarker(id, status) {
+  if (!id) {
+    throw new Error('Pass ID in order to update marker')
+  }
+
+  if (!MARKERS_SUPPORTED_STATUSES[status]) {
+    throw new Error('Status not supported')
+  }
+
+  return getMarker(id)
+    .then(marker => {
+      const oldStatus = marker.status;
+
+      if (oldStatus === status) {
+        return Promise.resolve(marker);
+      }
+
+      return dynamoDbClient.update(
+        {
+          TableName: MARKERS_TABLE,
+          Key: {
+            'hashKey': marker.hashKey,
+            'createdAt': marker.createdAt
+          },
+          ExpressionAttributeValues: {
+            ':status': status,
+          },
+          ExpressionAttributeNames: {
+            '#s': 'status'
+          },
+          UpdateExpression: 'set #s = :status',
+        }).promise()
+        .then(() => {
+          return new Promise((resolve, reject) => {
+            User.getUser(marker.userId)
+              .then((user) =>  {
+                notifier.notify({
+                  token: user.registrationToken,
+                  message: {
+                    title: 'Zmiana statusu zgłoszenia',
+                    body: `Twoje zgłoszenie zmieniło status z ${oldStatus} na ${status}`,
+                    meta: Object.assign({}, marker, {oldStatus})
+                  }
+                })
+                return resolve(Object.assign(marker, {status}))
+            })
+          })
+        })
+    })
+}
+
 module.exports = {
   Marker,
   getMarkers,
   getMarker,
   createMarker,
+  updateMarker,
   MARKERS_SUPPORTED_TYPES
 }

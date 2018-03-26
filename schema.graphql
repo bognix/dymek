@@ -1,5 +1,5 @@
-# source: http://localhost:3000/api/markers
-# timestamp: Fri Mar 09 2018 08:10:26 GMT+0100 (CET)
+# source: http://localhost:3000/api/q
+# timestamp: Wed Mar 21 2018 19:46:50 GMT+0100 (CET)
 
 schema {
   query: Root
@@ -9,7 +9,7 @@ schema {
 input CreateMarkerInput {
   latitude: Float!
   longitude: Float!
-  type: MarkerType
+  type: String
   clientMutationId: String
 }
 
@@ -26,11 +26,12 @@ type geo {
 type Marker implements Node {
   id: ID!
   createdAt: String
-  userId: ID
-  type: MarkerType
+  user: User
+  type: String
   geoJson: geo
   hashKey: String
   geoHash: String
+  status: String
 }
 
 """A connection to a list of items."""
@@ -51,14 +52,10 @@ type MarkerEdge {
   cursor: String!
 }
 
-enum MarkerType {
-  CHIMNEY_SMOKE
-  DOG_POOP
-  ILLEGAL_PARKING
-}
-
 type Mutation {
   createMarker(input: CreateMarkerInput!): CreateMarkerPayload
+  updateOrCreateUser(input: UpdateOrCreateUserInput!): UpdateOrCreateUserPayload
+  updateMarker(input: UpdateMarkerInput!): UpdateMarkerPayload
 }
 
 """An object with an ID"""
@@ -89,11 +86,37 @@ input QueryRadius {
 }
 
 type Root {
-  markers(userId: ID, type: MarkerType, location: QueryRadius, after: String, first: Int, before: String, last: Int): MarkerConnection
+  markers(userId: ID, types: [String], location: QueryRadius, after: String, first: Int, before: String, last: Int): MarkerConnection
 
   """Fetches an object given its ID"""
   node(
     """The ID of an object"""
     id: ID!
   ): Node
+}
+
+input UpdateMarkerInput {
+  status: String
+  id: ID
+  clientMutationId: String
+}
+
+type UpdateMarkerPayload {
+  markerEdge: MarkerEdge
+  clientMutationId: String
+}
+
+input UpdateOrCreateUserInput {
+  registrationToken: String
+  clientMutationId: String
+}
+
+type UpdateOrCreateUserPayload {
+  user: User
+  clientMutationId: String
+}
+
+type User {
+  userId: ID
+  registrationToken: String
 }

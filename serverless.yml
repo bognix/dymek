@@ -3,6 +3,7 @@ service: dymek-api
 provider:
   name: aws
   stage: ${opt:stage, 'dev'}
+  region: ${self:custom.appRegion}
   runtime: nodejs6.10
   iamRoleStatements:
     - Effect: Allow
@@ -15,31 +16,64 @@ provider:
         - dynamodb:DeleteItem
       Resource:
         - { Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }
+        - { Fn::GetAtt: ["UsersDynamoDBTable", "Arn"] }
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/geohash-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/id-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/userId-createdAt-index' ] ]}
+    - Effect: Allow
+      Action:
+        - SNS:Publish
+        - SNS:Subscribe
+      Resource:
+        - ${self:custom.snsTopicArn}
+
   environment:
     MARKERS_TABLE: ${self:custom.markersTableName}
+    USERS_TABLE: ${self:custom.usersTableName}
     DEV_DB_PORT: ${self:custom.dynamodb.start.port}
+    DEV_SNS_PORT: ${self:custom.serverless-offline-sns.port}
+    GCLOUD_PROJECT: dymek-web-1519202400328
+    SNS_TOPIC_ARN: ${self:custom.snsTopicArn}
+    SNS_TOPIC_NAME: ${self:custom.snsTopicName}
+    APP_REGION: ${self:custom.appRegion}
 
 plugins:
   - serverless-dynamodb-local
+  - serverless-offline-sns
   - serverless-offline
 
 custom:
   markersTableName: 'markers-table-${self:provider.stage}-geo'
-  tableResource: { "Fn::GetAtt": ["MarkersDynamoDBTable", "Arn" ] }
+  usersTableName: 'users-table-${self:provider.stage}'
+  snsTopicName: 'notify-${self:provider.stage}'
+  snsTopicArn:
+    Fn::Join:
+      - ':'
+      - - arn
+        - aws
+        - sns
+        - Ref: AWS::Region
+        - Ref: AWS::AccountId
+        - ${self:custom.snsTopicName}
   dynamodb:
     start:
       migrate: true
       port: 9123
+  serverless-offline-sns:
+    port: 4002 # a free port for the sns server to run on
+    debug: true
+  appRegion: ${opt:region, 'eu-centarl-1'}
 
 functions:
+  messanger:
+    handler: server/messanger.handler
+    events:
+      - sns: ${self:custom.snsTopicName}
   markers:
     handler: server/index.handler
     events:
       - http:
-          path: /api/markers
+          path: /api/q
           method: get
           cors:
             origins:
@@ -52,7 +86,7 @@ functions:
               - X-Api-Key
               - X-Amz-Security-Token
       - http:
-          path: /api/markers
+          path: /api/q
           method: post
           cors:
             origins:
@@ -137,3 +171,18 @@ resources:
           ReadCapacityUnits: 10
           WriteCapacityUnits: 5
         TableName: ${self:custom.markersTableName}
+    UsersDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: userId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.usersTableName}

@@ -5,9 +5,11 @@
     "dynamodb-geo": "^0.3.2",
     "express": "^4.16.2",
     "express-graphql": "^0.6.12",
+    "firebase-admin": "^5.11.0",
     "graphql": "^0.13.1",
     "graphql-relay": "^0.5.4",
     "serverless-http": "^1.5.3",
+    "serverless-offline-sns": "^0.35.0",
     "uuid": "^3.2.1"
   },
   "name": "dymek-api",
