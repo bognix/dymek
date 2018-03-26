@@ -18,7 +18,11 @@ const handler = (event, context, callback) => {
   }
 
   const message = {
-    data: payload.message,
+    data: {
+      body: payload.message.body,
+      title: payload.message.title,
+      meta: JSON.stringify(payload.message.meta)
+    },
     token: payload.token
   };
 
