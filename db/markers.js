@@ -91,8 +91,6 @@ function createMarker(latitude, longitude, type, userId) {
       }
     }
   }).promise()
-  // TODO this is temporary - figure out user registration flow
-  .then(() => User.updateOrCreateUser(userId))
   .then(() => getMarker(id))
 }
 
@@ -227,7 +225,8 @@ function updateMarker(id, status) {
                   token: user.registrationToken,
                   message: {
                     title: 'Zmiana statusu zgłoszenia',
-                    body: `Twoje zgłoszenie zmieniło status z ${oldStatus} na ${status}`
+                    body: `Twoje zgłoszenie zmieniło status z ${oldStatus} na ${status}`,
+                    meta: Object.assign({}, marker, {oldStatus})
                   }
                 })
                 return resolve(Object.assign(marker, {status}))

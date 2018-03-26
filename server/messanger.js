@@ -9,6 +9,7 @@ if (!admin.apps.length) {
 }
 
 const handler = (event, context, callback) => {
+  context.callbackWaitsForEmptyEventLoop = false;
   const payload = JSON.parse(event.Records[0].Sns.Message).event;
 
   if (!payload.token) {
@@ -21,12 +22,14 @@ const handler = (event, context, callback) => {
     token: payload.token
   };
 
-  admin.messaging().send(message)
-    .then(callback)
+  return admin.messaging().send(message)
+    .then(() => {
+      return callback(null, 'success')
+    })
     .catch((error) => {
       console.error(payload);
       console.error('Error sending message:', error);
-      callback(error);
+      return callback(error);
     });
 
 }
