@@ -4,6 +4,7 @@ const ddbGeo = require('dynamodb-geo');
 const {dynamoDb, dynamoDbClient} =  require('./index');
 const User = require('./users');
 const notifier = require('../server/notifier');
+const reporter = require('../server/reporter');
 
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
 
@@ -38,12 +39,12 @@ function getMarker(id) {
     KeyConditionExpression: 'id=:id',
     Limit: 1
   }).promise()
-    .then(({Items}) => {
-      const marker = new Marker()
-      return User.getUser(Items[0].userId)
-        .then(user => {
-          return Object.assign(marker, {user: Object.assign({}, user)}, Items[0])
-        })
+  .then(({Items}) => {
+    const marker = new Marker()
+    return User.getUser(Items[0].userId)
+    .then(user => {
+      return Object.assign(marker, {user: Object.assign({}, user)}, Items[0])
+    })
   }).catch((err) => {
     throw new Error(err)
   })
@@ -91,7 +92,10 @@ function createMarker(latitude, longitude, type, userId) {
       }
     }
   }).promise()
-  .then(() => getMarker(id))
+  .then(() => {
+    reporter.publish(marker)
+    return getMarker(id)
+  })
 }
 
 function getMarkers({userId, markerTypes = [], location}, internal = false) {
@@ -202,8 +206,7 @@ function updateMarker(id, status) {
         return Promise.resolve(marker);
       }
 
-      return dynamoDbClient.update(
-        {
+      return dynamoDbClient.update({
           TableName: MARKERS_TABLE,
           Key: {
             'hashKey': marker.hashKey,
@@ -216,31 +219,26 @@ function updateMarker(id, status) {
             '#s': 'status'
           },
           UpdateExpression: 'set #s = :status',
-        }).promise()
-        .then(() => {
-          return new Promise((resolve, reject) => {
-            User.getUser(marker.userId)
-              .then((user) =>  {
-                notifier.notify({
-                  token: user.registrationToken,
-                  message: {
-                    title: 'Zmiana statusu zgłoszenia',
-                    body: `Twoje zgłoszenie zmieniło status z ${oldStatus} na ${status}`,
-                    meta: Object.assign({}, marker, {oldStatus})
-                  }
-                })
-                return resolve(Object.assign(marker, {status}))
-            })
-          })
         })
-    })
-}
+        .promise().then(() => {
+          notifier.publish({
+            token: marker.user.registrationToken,
+            message: {
+              title: 'Zmiana statusu zgłoszenia',
+              body: `Twoje zgłoszenie zmieniło status z ${oldStatus} na ${status}`,
+              meta: Object.assign({}, marker, {oldStatus})
+            }
+          })
+          return Object.assign(marker, {status})
+        })
+      })
+  }
 
-module.exports = {
-  Marker,
-  getMarkers,
-  getMarker,
-  createMarker,
-  updateMarker,
-  MARKERS_SUPPORTED_TYPES
-}
+  module.exports = {
+    Marker,
+    getMarkers,
+    getMarker,
+    createMarker,
+    updateMarker,
+    MARKERS_SUPPORTED_TYPES
+  }

@@ -10,7 +10,7 @@ if (!admin.apps.length) {
 
 const handler = (event, context, callback) => {
   context.callbackWaitsForEmptyEventLoop = false;
-  const payload = JSON.parse(event.Records[0].Sns.Message).event;
+  const payload = JSON.parse(event.Records[0].Sns.Message);
 
   if (!payload.token) {
     console.error('token not set.');
