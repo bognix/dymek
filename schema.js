@@ -40,6 +40,10 @@ const  {
   getUser
 } = require ('./db/users');
 
+const  {
+  getReports
+} = require ('./db/reports');
+
 const {nodeInterface, nodeField} = nodeDefinitions(
   (globalId) => {
     const {type, id} = fromGlobalId(globalId);
@@ -95,6 +99,24 @@ const GraphQLUser = new GraphQLObjectType({
   }
 });
 
+const GraphQLReport = new GraphQLObjectType({
+  name: 'Report',
+  fields: {
+    id: {
+      type: GraphQLID,
+      resolve: obj => obj.id
+    },
+    status: {
+      type: GraphQLString,
+      resolve: obj => obj.status
+    },
+    type: {
+      type: GraphQLString,
+      resolve: obj => obj.type
+    },
+  }
+});
+
 const GraphQLMarker = new GraphQLObjectType({
   name: 'Marker',
   fields: {
@@ -128,10 +150,6 @@ const GraphQLMarker = new GraphQLObjectType({
       type: GraphQLString,
       resolve: obj => obj.geohash
     },
-    status: {
-      type: GraphQLString,
-      resolve: obj => obj.status
-    },
     reportId: {
       type: GraphQLString,
       resolve: obj => obj.reportId
@@ -148,6 +166,14 @@ const {
   nodeType: GraphQLMarker,
 });
 
+const {
+  connectionType: ReportsConnection,
+  edgeType: GraphQLReportEdge,
+} = connectionDefinitions({
+  name: 'Report',
+  nodeType: GraphQLReport,
+});
+
 const markerQueryArgs = Object.assign({
   userId: {
     type: GraphQLID
@@ -160,6 +186,15 @@ const markerQueryArgs = Object.assign({
   }
 }, connectionArgs)
 
+const reportQueryArgs = Object.assign({
+  location: {
+    type: GraphQLQueryRadius
+  },
+  types: {
+    type: new GraphQLList(GraphQLString)
+  },
+}, connectionArgs)
+
 const Root = new GraphQLObjectType({
   name: 'Root',
   fields: {
@@ -168,6 +203,13 @@ const Root = new GraphQLObjectType({
       args: markerQueryArgs,
       resolve: (obj, args) => {
         return connectionFromPromisedArray(getMarkers({userId: args.userId, markerTypes: args.types, location: args.location}), args)
+      }
+    },
+    reports: {
+      type: ReportsConnection,
+      args: reportQueryArgs,
+      resolve: (obj, args) => {
+        return connectionFromPromisedArray(getReports({location: args.location}), args)
       }
     },
     node: nodeField,

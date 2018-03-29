@@ -20,24 +20,6 @@ const reportsGeoTableManager = new ddbGeo.GeoDataManager(config);
 
 class Report {}
 
-function getReport(id) {
-  return dynamoDbClient.query({
-    TableName: REPORTS_TABLE,
-    IndexName: 'reportId-index',
-    ExpressionAttributeValues: {
-      ':reportId': id
-    },
-    KeyConditionExpression: 'reportId=:reportId',
-    Limit: 1
-  }).promise()
-  .then(({Items}) => {
-    const report = new Report()
-    return Object.assign(report, Items[0])
-  }).catch((err) => {
-    throw new Error(err)
-  })
-}
-
 function getReportForMarker(marker) {
   return dynamoDbClient.query({
     TableName: REPORTS_TABLE,
@@ -86,8 +68,35 @@ function createReportForMarker(marker) {
   })
 }
 
+function getReports({location}, internal = false) {
+  return new Promise ((resolve, reject) => {
+    if (!location && !internal) {
+      throw new Error('You need to provide at least one filter')
+      return reject();
+    }
+    const params = {
+      TableName: REPORTS_TABLE
+    }
+    let ExpressionAttributeNames = {}
+    let ExpressionAttributeValues = {}
+
+    return reportsGeoTableManager.queryRadius({
+      RadiusInMeter: location.radius,
+      CenterPoint: {
+        latitude: location.latitude,
+        longitude: location.longitude
+      }
+    })
+    .then((items) => {
+      let filteredItems = items;
+
+      return resolve(filteredItems.map(item => AWS.DynamoDB.Converter.unmarshall(item)))
+    });
+  })
+}
 
 module.exports = {
   getReportForMarker,
+  getReports,
   createReportForMarker
 }

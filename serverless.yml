@@ -219,7 +219,7 @@ resources:
             AttributeName: geohash
             AttributeType: N
           -
-            AttributeName: reportId
+            AttributeName: id
             AttributeType: S
         KeySchema:
           -
@@ -242,10 +242,10 @@ resources:
               ProjectionType: ALL
         GlobalSecondaryIndexes:
           -
-            IndexName: reportId-index
+            IndexName: id-index
             KeySchema:
               -
-                AttributeName: reportId
+                AttributeName: id
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
