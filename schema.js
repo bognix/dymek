@@ -114,6 +114,22 @@ const GraphQLReport = new GraphQLObjectType({
       type: GraphQLString,
       resolve: obj => obj.type
     },
+    geoJson: {
+      type: GraphQLGeoJson,
+      resolve: obj => {
+        return JSON.parse(obj.geoJson)
+      }
+    },
+    createdAt: {
+      type: GraphQLString,
+      resolve: obj => {
+        return obj.createdAt
+      }
+    },
+    updatedAt: {
+      type: GraphQLString,
+      resolve: obj => obj.updatedAt
+    }
   }
 });
 
@@ -266,7 +282,6 @@ const GraphQLUpdateOrCreateUserMutation = mutationWithClientMutationId({
 const GraphQLUpdateMarkerMutation = mutationWithClientMutationId({
   name: 'UpdateMarker',
   inputFields: {
-    status: { type: GraphQLString },
     id: { type: GraphQLID }
   },
   outputFields: {
@@ -286,8 +301,8 @@ const GraphQLUpdateMarkerMutation = mutationWithClientMutationId({
       },
     }
   },
-  mutateAndGetPayload: ({id, status}, {req}) => {
-    return updateMarker(id, status)
+  mutateAndGetPayload: ({id}, {req}) => {
+    return updateMarker(id)
   },
 });
 
