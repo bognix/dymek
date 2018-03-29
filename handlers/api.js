@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const express = require('express')
 const app = express()
 const uuid = require('uuid/v4')
-const apiRouter = require('./api');
+const apiRouter = require('../server/api');
 
 app.use(bodyParser.json({ strict: false }));
 app.use('/api', apiRouter)

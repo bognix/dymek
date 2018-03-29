@@ -66,7 +66,7 @@ const GraphQLGeoJson = new GraphQLObjectType({
     longitude: {
       type: GraphQLFloat,
       resolve: obj => obj.coordinates[0]
-    }
+    },
   }
 });
 
@@ -131,6 +131,10 @@ const GraphQLMarker = new GraphQLObjectType({
     status: {
       type: GraphQLString,
       resolve: obj => obj.status
+    },
+    reportId: {
+      type: GraphQLString,
+      resolve: obj => obj.reportId
     }
   },
   interfaces: [nodeInterface],

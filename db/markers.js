@@ -62,8 +62,8 @@ function createMarker(latitude, longitude, type, userId) {
     throw new Error('Lat or Long not set');
   }
 
-  const latitudeNum = Number(latitude);
-  const longitudeNum = Number(longitude);
+  const latitudeNum = Number(latitude).toFixed(4);
+  const longitudeNum = Number(longitude).toFixed(4);
 
   if (isNaN(latitudeNum) || isNaN(longitudeNum)) {
     throw new Error('Lat or Long has invalid form');
@@ -80,8 +80,8 @@ function createMarker(latitude, longitude, type, userId) {
   return markersGeoTableManager.putPoint({
     RangeKeyValue: { S: createdAt },
     GeoPoint: {
-      latitude: latitude,
-      longitude: longitude
+      latitude: latitudeNum,
+      longitude: longitudeNum
     },
     PutItemInput: {
       Item: {
@@ -92,10 +92,15 @@ function createMarker(latitude, longitude, type, userId) {
       }
     }
   }).promise()
-  .then(() => {
-    reporter.publish(marker)
-    return getMarker(id)
-  })
+  .then(() => new Promise((resolve, reject) => {
+      getMarker(id)
+        .then((marker) => {
+          reporter.publish(marker)
+          resolve(marker);
+        })
+        .catch(reject)
+    })
+  )
 }
 
 function getMarkers({userId, markerTypes = [], location}, internal = false) {
@@ -189,22 +194,41 @@ function getMarkers({userId, markerTypes = [], location}, internal = false) {
   })
 }
 
-function updateMarker(id, status) {
+function updateMarker(id, {status, reportId}) {
   if (!id) {
     throw new Error('Pass ID in order to update marker')
   }
 
-  if (!MARKERS_SUPPORTED_STATUSES[status]) {
+  if (status && !MARKERS_SUPPORTED_STATUSES[status]) {
     throw new Error('Status not supported')
+  }
+
+  if (!status && !reportId) {
+    throw new Error('Pass at least one parameter to change')
   }
 
   return getMarker(id)
     .then(marker => {
       const oldStatus = marker.status;
 
-      if (oldStatus === status) {
+      if (oldStatus === status && !reportId) {
         return Promise.resolve(marker);
       }
+
+      const ExpressionAttributeValues = {}
+      const ExpressionAttributeNames = {}
+
+      if (status) {
+        ExpressionAttributeValues[':status'] = status
+        ExpressionAttributeNames['#s'] = 'status'
+      }
+
+      if (reportId) {
+        ExpressionAttributeValues[':reportId'] = reportId
+        ExpressionAttributeNames['#r'] = 'reportId'
+      }
+
+      const UpdateExpression = `set ${status ? '#s=:status' : ''} ${reportId ? '#r=:reportId' : ''}`
 
       return dynamoDbClient.update({
           TableName: MARKERS_TABLE,
@@ -212,16 +236,12 @@ function updateMarker(id, status) {
             'hashKey': marker.hashKey,
             'createdAt': marker.createdAt
           },
-          ExpressionAttributeValues: {
-            ':status': status,
-          },
-          ExpressionAttributeNames: {
-            '#s': 'status'
-          },
-          UpdateExpression: 'set #s = :status',
+          ExpressionAttributeValues,
+          ExpressionAttributeNames,
+          UpdateExpression,
         })
         .promise().then(() => {
-          notifier.publish({
+          status && notifier.publish({
             token: marker.user.registrationToken,
             message: {
               title: 'Zmiana statusu zgłoszenia',
@@ -229,7 +249,7 @@ function updateMarker(id, status) {
               meta: Object.assign({}, marker, {oldStatus})
             }
           })
-          return Object.assign(marker, {status})
+          return Object.assign(marker, {status, reportId})
         })
       })
   }

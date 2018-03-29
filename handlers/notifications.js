@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 
-const serviceAccount = require('./cert.json');
+const serviceAccount = require('../cert.json');
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -21,7 +21,7 @@ const handler = (event, context, callback) => {
     data: {
       body: payload.message.body,
       title: payload.message.title,
-      meta: JSON.stringify(payload.message.meta)
+      meta: stringify(payload.message.meta)
     },
     token: payload.token
   };
