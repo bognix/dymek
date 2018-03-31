@@ -2,8 +2,6 @@ const {dynamoDb, dynamoDbClient} =  require('./index');
 
 const USERS_TABLE = process.env.USERS_TABLE;
 
-class User {}
-
 function getUser(id) {
   return dynamoDbClient.query({
     TableName: USERS_TABLE,
@@ -12,8 +10,7 @@ function getUser(id) {
     },
     KeyConditionExpression: 'userId=:id',
   }).promise().then(({Items}) => {
-    const user = new User()
-    return Object.assign(user, Items[0])
+    return Items[0]
   })
 }
 
@@ -44,7 +41,6 @@ function updateOrCreateUser(id, registrationToken = null) {
 }
 
 module.exports = {
-  User,
   getUser,
   updateOrCreateUser,
 }

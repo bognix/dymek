@@ -2,8 +2,7 @@ const AWS = require('aws-sdk');
 const uuid = require('uuid/v4')
 const ddbGeo = require('dynamodb-geo');
 const {dynamoDb, dynamoDbClient} =  require('./index');
-const User = require('./users');
-const notifier = require('../server/notifier');
+const user = require('./users');
 const reporter = require('../server/reporter');
 
 const MARKERS_TABLE = process.env.MARKERS_TABLE;
@@ -41,9 +40,9 @@ function getMarker(id) {
   }).promise()
   .then(({Items}) => {
     const marker = new Marker()
-    return User.getUser(Items[0].userId)
-    .then(user => {
-      return Object.assign(marker, {user: Object.assign({}, user)}, Items[0])
+    return user.getUser(Items[0].userId)
+    .then(userObject => {
+      return Object.assign(marker, {user: Object.assign({}, userObject)}, Items[0])
     })
   }).catch((err) => {
     throw new Error(err)
@@ -93,31 +92,55 @@ function createMarker(latitude, longitude, type, userId) {
     }
   }).promise()
   .then(() => new Promise((resolve, reject) => {
-      getMarker(id)
-        .then((marker) => {
-          reporter.publish(marker)
-          resolve(marker);
-        })
-        .catch(reject)
+    getMarker(id)
+    .then((marker) => {
+      reporter.publish(marker)
+      resolve(marker);
     })
-  )
+    .catch(reject)
+  })
+)
 }
 
-function getMarkers({userId, markerTypes = [], location}, internal = false) {
+function getMarkers({userId, markerTypes = [], location, reportId}, internal = false) {
   return new Promise ((resolve, reject) => {
-    if (!location && !userId && !markerTypes.length && !internal) {
+    if (!location && !userId && !markerTypes.length && !internal && !reportId) {
       throw new Error('You need to provide at least one filter')
       return reject();
     }
+    if (markerTypes.length && markerTypes.find(type => !MARKERS_SUPPORTED_TYPES[type])) {
+      throw new Error('One of passed types is not supported')
+    }
+
+    if (reportId) {
+      const params = {
+        IndexName: "reportId-createdAt-index",
+        ExpressionAttributeValues: {
+          ':reportId': reportId
+        },
+        KeyConditionExpression: "reportId=:reportId",
+        TableName: MARKERS_TABLE
+      }
+      return dynamoDbClient.query(params, (error, result) => {
+        if (error) {
+          console.log(error);
+          throw new Error('Could not get markers')
+        }
+
+        if (result && result.Items) {
+          return resolve(result.Items)
+        }
+
+        console.log(error);
+        throw new Error('Could not get markers')
+      });
+    }
+
     const params = {
       TableName: MARKERS_TABLE
     }
     let ExpressionAttributeNames = {}
     let ExpressionAttributeValues = {}
-
-    if (markerTypes.length && markerTypes.find(type => !MARKERS_SUPPORTED_TYPES[type])) {
-      throw new Error('One of passed types is not supported')
-    }
 
     if (location) {
       return markersGeoTableManager.queryRadius({
@@ -194,71 +217,48 @@ function getMarkers({userId, markerTypes = [], location}, internal = false) {
   })
 }
 
-function updateMarker(id, {status, reportId}) {
+function updateMarker(id, {reportId}) {
   if (!id) {
     throw new Error('Pass ID in order to update marker')
   }
 
-  if (status && !MARKERS_SUPPORTED_STATUSES[status]) {
-    throw new Error('Status not supported')
-  }
-
-  if (!status && !reportId) {
+  if (!reportId) {
     throw new Error('Pass at least one parameter to change')
   }
 
   return getMarker(id)
-    .then(marker => {
-      const oldStatus = marker.status;
+  .then(marker => {
+    const ExpressionAttributeValues = {}
+    const ExpressionAttributeNames = {}
 
-      if (oldStatus === status && !reportId) {
-        return Promise.resolve(marker);
-      }
+    if (reportId) {
+      ExpressionAttributeValues[':reportId'] = reportId
+      ExpressionAttributeNames['#r'] = 'reportId'
+    }
 
-      const ExpressionAttributeValues = {}
-      const ExpressionAttributeNames = {}
+    const UpdateExpression = `set ${reportId ? '#r=:reportId' : ''}`
 
-      if (status) {
-        ExpressionAttributeValues[':status'] = status
-        ExpressionAttributeNames['#s'] = 'status'
-      }
+    return dynamoDbClient.update({
+      TableName: MARKERS_TABLE,
+      Key: {
+        'hashKey': marker.hashKey,
+        'createdAt': marker.createdAt
+      },
+      ExpressionAttributeValues,
+      ExpressionAttributeNames,
+      UpdateExpression,
+    })
+    .promise().then(() => {
+      return Object.assign(marker, {reportId})
+    })
+  })
+}
 
-      if (reportId) {
-        ExpressionAttributeValues[':reportId'] = reportId
-        ExpressionAttributeNames['#r'] = 'reportId'
-      }
-
-      const UpdateExpression = `set ${status ? '#s=:status' : ''} ${reportId ? '#r=:reportId' : ''}`
-
-      return dynamoDbClient.update({
-          TableName: MARKERS_TABLE,
-          Key: {
-            'hashKey': marker.hashKey,
-            'createdAt': marker.createdAt
-          },
-          ExpressionAttributeValues,
-          ExpressionAttributeNames,
-          UpdateExpression,
-        })
-        .promise().then(() => {
-          status && notifier.publish({
-            token: marker.user.registrationToken,
-            message: {
-              title: 'Zmiana statusu zgłoszenia',
-              body: `Twoje zgłoszenie zmieniło status z ${oldStatus} na ${status}`,
-              meta: Object.assign({}, marker, {oldStatus})
-            }
-          })
-          return Object.assign(marker, {status, reportId})
-        })
-      })
-  }
-
-  module.exports = {
-    Marker,
-    getMarkers,
-    getMarker,
-    createMarker,
-    updateMarker,
-    MARKERS_SUPPORTED_TYPES
-  }
+module.exports = {
+  Marker,
+  getMarkers,
+  getMarker,
+  createMarker,
+  updateMarker,
+  MARKERS_SUPPORTED_TYPES
+}

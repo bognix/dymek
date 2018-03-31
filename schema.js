@@ -35,14 +35,11 @@ const {
 } = require('./db/markers');
 
 const  {
-  User,
   updateOrCreateUser,
   getUser
 } = require ('./db/users');
 
-const  {
-  getReports
-} = require ('./db/reports');
+const reportDB = require ('./db/reports');
 
 const {nodeInterface, nodeField} = nodeDefinitions(
   (globalId) => {
@@ -50,12 +47,22 @@ const {nodeInterface, nodeField} = nodeDefinitions(
     if (type === 'Marker') {
       return getMarker(id)
     }
+
+    if (type === 'Report') {
+      return reportDB.getReport(id)
+    }
+
     return null;
   },
   (obj) => {
     if (obj instanceof Marker) {
       return GraphQLMarker;
     }
+
+    if (obj instanceof reportDB.Report) {
+      return GraphQLReport;
+    }
+
     return null;
   }
 );
@@ -99,47 +106,14 @@ const GraphQLUser = new GraphQLObjectType({
   }
 });
 
-const GraphQLReport = new GraphQLObjectType({
-  name: 'Report',
-  fields: {
-    id: {
-      type: GraphQLID,
-      resolve: obj => obj.id
-    },
-    status: {
-      type: GraphQLString,
-      resolve: obj => obj.status
-    },
-    type: {
-      type: GraphQLString,
-      resolve: obj => obj.type
-    },
-    geoJson: {
-      type: GraphQLGeoJson,
-      resolve: obj => {
-        return JSON.parse(obj.geoJson)
-      }
-    },
-    createdAt: {
-      type: GraphQLString,
-      resolve: obj => {
-        return obj.createdAt
-      }
-    },
-    updatedAt: {
-      type: GraphQLString,
-      resolve: obj => obj.updatedAt
-    }
-  }
-});
-
 const GraphQLMarker = new GraphQLObjectType({
   name: 'Marker',
-  fields: {
+  fields: () => ({
     id: {
       type: new GraphQLNonNull(GraphQLID),
       resolve: (obj) => obj.id
     },
+    globalId: globalIdField(),
     createdAt: {
       type: GraphQLString,
       resolve: (obj) => obj.createdAt,
@@ -166,11 +140,57 @@ const GraphQLMarker = new GraphQLObjectType({
       type: GraphQLString,
       resolve: obj => obj.geohash
     },
-    reportId: {
+    report: {
+      type: GraphQLReport,
+      resolve: (obj) => reportDB.getReport(obj.reportId)
+    },
+  }),
+  interfaces: [nodeInterface],
+});
+
+const GraphQLReport = new GraphQLObjectType({
+  name: 'Report',
+  fields: () => ({
+    id: {
+      type: GraphQLNonNull(GraphQLID),
+      resolve: obj => obj.id
+    },
+    status: {
       type: GraphQLString,
-      resolve: obj => obj.reportId
-    }
-  },
+      resolve: obj => obj.status
+    },
+    type: {
+      type: GraphQLString,
+      resolve: obj => obj.type
+    },
+    geoJson: {
+      type: GraphQLGeoJson,
+      resolve: obj => {
+        return JSON.parse(obj.geoJson)
+      }
+    },
+    createdAt: {
+      type: GraphQLString,
+      resolve: obj => {
+        return obj.createdAt
+      }
+    },
+    hashKey: {
+      type: GraphQLInt,
+      resolve: obj => obj.hashKey
+    },
+    updatedAt: {
+      type: GraphQLString,
+      resolve: obj => obj.updatedAt
+    },
+    markers: {
+      type: new GraphQLList(GraphQLMarker),
+      resolve: obj => {
+        return getMarkers({reportId: obj.id})
+      }
+    },
+    globalId: globalIdField(),
+  }),
   interfaces: [nodeInterface],
 });
 
@@ -225,7 +245,7 @@ const Root = new GraphQLObjectType({
       type: ReportsConnection,
       args: reportQueryArgs,
       resolve: (obj, args) => {
-        return connectionFromPromisedArray(getReports({location: args.location}), args)
+        return connectionFromPromisedArray(reportDB.getReports({location: args.location}), args)
       }
     },
     node: nodeField,
@@ -279,20 +299,21 @@ const GraphQLUpdateOrCreateUserMutation = mutationWithClientMutationId({
   },
 });
 
-const GraphQLUpdateMarkerMutation = mutationWithClientMutationId({
-  name: 'UpdateMarker',
+const GraphQLUpdateReportMutation = mutationWithClientMutationId({
+  name: 'UpdateReport',
   inputFields: {
-    id: { type: GraphQLID }
+    id: { type: GraphQLID },
+    status: { type: GraphQLString }
   },
   outputFields: {
-    markerEdge: {
-      type: GraphQLMarkerEdge,
-      resolve: (marker) => {
-        return getMarkers({}, true)
-        .then(markers => {
+    reportEdge: {
+      type: GraphQLReportEdge,
+      resolve: (report) => {
+        return reportDB.getReports({}, true)
+        .then(reports => {
           return Promise.resolve({
-            cursor: offsetToCursor(markers.findIndex((m => m.id === marker.id))),
-            node: marker
+            cursor: offsetToCursor(reports.findIndex((r => r.id === report.id))),
+            node: report
           })
         }).catch(err => {
           console.log(err)
@@ -301,8 +322,8 @@ const GraphQLUpdateMarkerMutation = mutationWithClientMutationId({
       },
     }
   },
-  mutateAndGetPayload: ({id}, {req}) => {
-    return updateMarker(id)
+  mutateAndGetPayload: ({id, status}, {req}) => {
+    return reportDB.updateReport(id, {status})
   },
 });
 
@@ -311,7 +332,7 @@ const Mutation = new GraphQLObjectType({
   fields: {
     createMarker: GraphQLCreateMarkerMutation,
     updateOrCreateUser: GraphQLUpdateOrCreateUserMutation,
-    updateMarker: GraphQLUpdateMarkerMutation
+    updateReport: GraphQLUpdateReportMutation
   },
 });
 

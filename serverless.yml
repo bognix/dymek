@@ -141,6 +141,9 @@ resources:
           -
             AttributeName: id
             AttributeType: S
+          -
+            AttributeName: reportId
+            AttributeType: S
         KeySchema:
           -
             AttributeName: hashKey
@@ -181,6 +184,20 @@ resources:
               -
                 AttributeName: id
                 KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          -
+            IndexName: reportId-createdAt-index
+            KeySchema:
+              -
+                AttributeName: reportId
+                KeyType: HASH
+              -
+                AttributeName: createdAt
+                KeyType: RANGE
             Projection:
               ProjectionType: ALL
             ProvisionedThroughput:
