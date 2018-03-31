@@ -50,11 +50,9 @@ function getReport(id, withMarkers = false) {
 function getReportForMarker(marker) {
   return dynamoDbClient.query({
     TableName: REPORTS_TABLE,
-    IndexName: 'geohash-index',
-    KeyConditionExpression: 'geohash=:ghash and hashKey=:hkey',
-    FilterExpression: '#t = :type',
+    IndexName: 'geohash-type-index',
+    KeyConditionExpression: 'geohash=:ghash and #t=:type',
     ExpressionAttributeValues: {
-      ':hkey': marker.hashKey,
       ':ghash': marker.geohash,
       ':type': marker.type
     },

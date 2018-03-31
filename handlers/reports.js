@@ -1,4 +1,3 @@
-const admin = require('firebase-admin');
 const reports = require('../db/reports');
 const markers = require('../db/markers');
 

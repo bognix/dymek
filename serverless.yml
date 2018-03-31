@@ -23,6 +23,7 @@ provider:
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/userId-createdAt-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/reportId-createdAt-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["ReportsDynamoDBTable", "Arn"] }, 'index/geohash-index' ] ]}
+        - { Fn::Join: [ "/", [{ Fn::GetAtt: ["ReportsDynamoDBTable", "Arn"] }, 'index/geohash-type-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["ReportsDynamoDBTable", "Arn"] }, 'index/id-index' ] ]}
     - Effect: Allow
       Action:
@@ -42,7 +43,7 @@ provider:
     SNS_NOTIFICATION_TOPIC_ARN: ${self:custom.snsNotificationTopicArn}
     SNS_NOTIFICATION_TOPIC_NAME: ${self:custom.snsNotificationTopicName}
     SNS_REPORT_TOPIC_NAME: ${self:custom.snsReportTopicName}
-    SNS_REPORT_TOPIC_ARN: ${self:custom.snsReportTopicName}
+    SNS_REPORT_TOPIC_ARN: ${self:custom.snsReportTopicArn}
     APP_REGION: ${self:custom.appRegion}
 
 plugins:
@@ -242,6 +243,9 @@ resources:
           -
             AttributeName: id
             AttributeType: S
+          -
+            AttributeName: type
+            AttributeType: S
         KeySchema:
           -
             AttributeName: hashKey
@@ -268,6 +272,20 @@ resources:
               -
                 AttributeName: id
                 KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          -
+            IndexName: geohash-type-index
+            KeySchema:
+              -
+                AttributeName: geohash
+                KeyType: HASH
+              -
+                AttributeName: type
+                KeyType: RANGE
             Projection:
               ProjectionType: ALL
             ProvisionedThroughput:
