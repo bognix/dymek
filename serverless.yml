@@ -17,9 +17,13 @@ provider:
       Resource:
         - { Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }
         - { Fn::GetAtt: ["UsersDynamoDBTable", "Arn"] }
+        - { Fn::GetAtt: ["ReportsDynamoDBTable", "Arn"] }
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/geohash-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/id-index' ] ]}
         - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/userId-createdAt-index' ] ]}
+        - { Fn::Join: [ "/", [{ Fn::GetAtt: ["MarkersDynamoDBTable", "Arn"] }, 'index/reportId-createdAt-index' ] ]}
+        - { Fn::Join: [ "/", [{ Fn::GetAtt: ["ReportsDynamoDBTable", "Arn"] }, 'index/geohash-index' ] ]}
+        - { Fn::Join: [ "/", [{ Fn::GetAtt: ["ReportsDynamoDBTable", "Arn"] }, 'index/id-index' ] ]}
     - Effect: Allow
       Action:
         - SNS:Publish
