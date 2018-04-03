@@ -102,7 +102,7 @@ function createMarker(latitude, longitude, type, userId) {
 )
 }
 
-function getMarkers({userId, markerTypes = [], location, reportId}, internal = false) {
+function getMarkers({userId, types: markerTypes = [], location, reportId}, internal = false) {
   return new Promise ((resolve, reject) => {
     if (!location && !userId && !markerTypes.length && !internal && !reportId) {
       throw new Error('You need to provide at least one filter')

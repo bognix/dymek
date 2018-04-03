@@ -41,11 +41,6 @@ const  {
 
 const reportDB = require ('./db/reports');
 
-const {
-  connectionForMarkers,
-  cursorForMarker,
-} = require('./relay');
-
 const {nodeInterface, nodeField} = nodeDefinitions(
   (globalId) => {
     const {type, id} = fromGlobalId(globalId);
@@ -189,9 +184,9 @@ const GraphQLReport = new GraphQLObjectType({
       resolve: obj => obj.updatedAt
     },
     markers: {
-      type: MarkersConnection,
-      resolve: (obj) => {
-        return connectionForMarkers(getMarkers({reportId: obj.id}))
+      type: new GraphQLList(GraphQLMarker),
+      resolve: obj => {
+        return getMarkers({reportId: obj.id})
       }
     },
     globalId: globalIdField(),
@@ -205,13 +200,6 @@ const {
 } = connectionDefinitions({
   name: 'Marker',
   nodeType: GraphQLMarker,
-  connectionFields: {
-    total: {
-      type: GraphQLInt,
-      description: 'Total number of items',
-      resolve: connection => connection.total
-    }
-  }
 });
 
 const {
@@ -250,7 +238,7 @@ const Root = new GraphQLObjectType({
       type: MarkersConnection,
       args: markerQueryArgs,
       resolve: (obj, args) => {
-        return connectionForMarkers(getMarkers(args))
+        return connectionFromPromisedArray(getMarkers(args), args)
       }
     },
     reports: {
@@ -278,7 +266,7 @@ const GraphQLCreateMarkerMutation = mutationWithClientMutationId({
         return getMarkers({}, true)
         .then(markers => {
           return Promise.resolve({
-            cursor: cursorForMarker(marker),
+            cursor: offsetToCursor(markers.findIndex((m => m.id === marker.id))),
             node: marker
           })
         }).catch(err => {
