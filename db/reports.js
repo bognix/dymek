@@ -144,6 +144,7 @@ function updateReport(id, {status}) {
     const report = resp.data.node
     const oldStatus = report.status;
 
+    console.log(status, oldStatus);
     if (oldStatus === status) {
       return Promise.resolve(report);
     }
@@ -174,7 +175,7 @@ function updateReport(id, {status}) {
       }, {}));
 
       const reportMeta = {
-        status: report.status,
+        status: status,
         oldStatus,
         type: report.type,
         geoJson: report.geoJson,
