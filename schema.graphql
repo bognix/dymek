@@ -1,5 +1,5 @@
 # source: http://localhost:3000/api/q
-# timestamp: Wed Mar 21 2018 19:46:50 GMT+0100 (CET)
+# timestamp: Sat Apr 14 2018 08:42:34 GMT+0200 (CEST)
 
 schema {
   query: Root
@@ -25,13 +25,16 @@ type geo {
 
 type Marker implements Node {
   id: ID!
+
+  """The ID of an object"""
+  globalId: ID!
   createdAt: String
   user: User
   type: String
   geoJson: geo
   hashKey: String
   geoHash: String
-  status: String
+  report: Report
 }
 
 """A connection to a list of items."""
@@ -41,6 +44,15 @@ type MarkerConnection {
 
   """A list of edges."""
   edges: [MarkerEdge]
+
+  """Total number of items"""
+  total: Int
+
+  """Date of creation of the first item"""
+  firstCreate: String
+
+  """Date of creation of the last item"""
+  lastCreate: String
 }
 
 """An edge in a connection."""
@@ -55,7 +67,7 @@ type MarkerEdge {
 type Mutation {
   createMarker(input: CreateMarkerInput!): CreateMarkerPayload
   updateOrCreateUser(input: UpdateOrCreateUserInput!): UpdateOrCreateUserPayload
-  updateMarker(input: UpdateMarkerInput!): UpdateMarkerPayload
+  updateReport(input: UpdateReportInput!): UpdateReportPayload
 }
 
 """An object with an ID"""
@@ -85,25 +97,47 @@ input QueryRadius {
   longitude: Float
 }
 
+type Report implements Node {
+  id: ID!
+  status: String
+  type: String
+  geoJson: geo
+  createdAt: String
+  hashKey: Int
+  updatedAt: String
+  markers: MarkerConnection
+
+  """The ID of an object"""
+  globalId: ID!
+}
+
+"""A connection to a list of items."""
+type ReportConnection {
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """A list of edges."""
+  edges: [ReportEdge]
+}
+
+"""An edge in a connection."""
+type ReportEdge {
+  """The item at the end of the edge"""
+  node: Report
+
+  """A cursor for use in pagination"""
+  cursor: String!
+}
+
 type Root {
   markers(userId: ID, types: [String], location: QueryRadius, after: String, first: Int, before: String, last: Int): MarkerConnection
+  reports(location: QueryRadius, types: [String], after: String, first: Int, before: String, last: Int): ReportConnection
 
   """Fetches an object given its ID"""
   node(
     """The ID of an object"""
     id: ID!
   ): Node
-}
-
-input UpdateMarkerInput {
-  status: String
-  id: ID
-  clientMutationId: String
-}
-
-type UpdateMarkerPayload {
-  markerEdge: MarkerEdge
-  clientMutationId: String
 }
 
 input UpdateOrCreateUserInput {
@@ -113,6 +147,17 @@ input UpdateOrCreateUserInput {
 
 type UpdateOrCreateUserPayload {
   user: User
+  clientMutationId: String
+}
+
+input UpdateReportInput {
+  id: ID
+  status: String
+  clientMutationId: String
+}
+
+type UpdateReportPayload {
+  reportEdge: ReportEdge
   clientMutationId: String
 }
 

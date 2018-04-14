@@ -212,6 +212,16 @@ const {
       type: GraphQLInt,
       description: 'Total number of items',
       resolve: connection => connection.total
+    },
+    firstCreate: {
+      type: GraphQLString,
+      description: 'Date of creation of the first item',
+      resolve: connection => connection.firstCreate
+    },
+    lastCreate: {
+      type: GraphQLString,
+      description: 'Date of creation of the last item',
+      resolve: connection => connection.lastCreate
     }
   }
 });

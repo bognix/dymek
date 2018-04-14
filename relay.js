@@ -11,6 +11,8 @@ function connectionForMarkers(markersPromised) {
       return {
         pageInfo,
         total: markers.length,
+        firstCreate: markers[0] && markers[0].createdAt,
+        lastCreate: markers[markers.length-1] && markers[markers.length-1].createdAt,
         edges: markers.map(marker => {
           return {
             node: marker,
@@ -33,13 +35,13 @@ function connectionForReports(reportsPromised) {
         hasPreviousPage: false,
         hasNextPage: false,
         startCursor: cursorForReport(reports[0]),
-        endCursor: cursorForReports(reports[reports.length-1]),
+        endCursor: cursorForReport(reports[reports.length-1]),
       }
 
       return {
         pageInfo,
         total: reports.length,
-        edges: reports.map(marker => {
+        edges: reports.map(report => {
           return {
             node: report,
             cursor: cursorForReport(report)

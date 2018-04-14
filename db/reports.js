@@ -95,7 +95,7 @@ function createReportForMarker(marker) {
 
 function getReports({location}) {
   return new Promise ((resolve, reject) => {
-    if (!location &&) {
+    if (!location) {
       throw new Error('You need to provide at least one filter')
       return reject();
     }
