@@ -22,8 +22,12 @@ function getReportWithUserTokens(reportId) {
           longitude
         }
         markers {
-          user {
-            registrationToken
+          edges {
+            node {
+              user {
+                registrationToken
+              }
+            }
           }
         }
       }

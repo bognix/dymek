@@ -93,9 +93,9 @@ function createReportForMarker(marker) {
   })
 }
 
-function getReports({location}, internal = false) {
+function getReports({location}) {
   return new Promise ((resolve, reject) => {
-    if (!location && !internal) {
+    if (!location &&) {
       throw new Error('You need to provide at least one filter')
       return reject();
     }
@@ -117,12 +117,6 @@ function getReports({location}, internal = false) {
 
       return resolve(filteredItems.map(item => AWS.DynamoDB.Converter.unmarshall(item)))
     });
-
-    if (internal) {
-      return dynamoDbClient.scan(params, (error, result) => {
-        return resolve(result.Items)
-      })
-    }
   })
 }
 
@@ -144,7 +138,6 @@ function updateReport(id, {status}) {
     const report = resp.data.node
     const oldStatus = report.status;
 
-    console.log(status, oldStatus);
     if (oldStatus === status) {
       return Promise.resolve(report);
     }
@@ -170,8 +163,8 @@ function updateReport(id, {status}) {
       UpdateExpression,
     })
     .promise().then(() => {
-      const tokens = Object.keys(report.markers.reduce((keys, marker) => {
-        return Object.assign({}, {[marker.user.registrationToken]: true}, keys)
+      const tokens = Object.keys(report.markers.edges.reduce((keys, marker) => {
+        return Object.assign({}, {[marker.node.user.registrationToken]: true}, keys)
       }, {}));
 
       const reportMeta = {

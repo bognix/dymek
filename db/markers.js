@@ -102,9 +102,9 @@ function createMarker(latitude, longitude, type, userId) {
 )
 }
 
-function getMarkers({userId, types: markerTypes = [], location, reportId}, internal = false) {
+function getMarkers({userId, types: markerTypes = [], location, reportId}) {
   return new Promise ((resolve, reject) => {
-    if (!location && !userId && !markerTypes.length && !internal && !reportId) {
+    if (!location && !userId && !markerTypes.length && !reportId) {
       throw new Error('You need to provide at least one filter')
       return reject();
     }
@@ -205,12 +205,6 @@ function getMarkers({userId, types: markerTypes = [], location, reportId}, inter
         console.log(error);
         throw new Error('Could not get markers')
       });
-    }
-
-    if (internal) {
-      return dynamoDbClient.scan(params, (error, result) => {
-        return resolve(result.Items)
-      })
     }
 
     throw new Error('oops, query not supported');

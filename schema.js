@@ -44,6 +44,8 @@ const reportDB = require ('./db/reports');
 const {
   connectionForMarkers,
   cursorForMarker,
+  connectionForReports,
+  cursorForReport
 } = require('./relay');
 
 const {nodeInterface, nodeField} = nodeDefinitions(
@@ -257,7 +259,7 @@ const Root = new GraphQLObjectType({
       type: ReportsConnection,
       args: reportQueryArgs,
       resolve: (obj, args) => {
-        return connectionFromPromisedArray(reportDB.getReports({location: args.location}), args)
+        return connectionForReports(reportDB.getReports({location: args.location}))
       }
     },
     node: nodeField,
@@ -275,12 +277,9 @@ const GraphQLCreateMarkerMutation = mutationWithClientMutationId({
     markerEdge: {
       type: GraphQLMarkerEdge,
       resolve: (marker) => {
-        return getMarkers({}, true)
-        .then(markers => {
           return Promise.resolve({
             cursor: cursorForMarker(marker),
             node: marker
-          })
         }).catch(err => {
           console.log(err)
           throw new Error(err);
@@ -321,12 +320,9 @@ const GraphQLUpdateReportMutation = mutationWithClientMutationId({
     reportEdge: {
       type: GraphQLReportEdge,
       resolve: (report) => {
-        return reportDB.getReports({}, true)
-        .then(reports => {
-          return Promise.resolve({
-            cursor: offsetToCursor(reports.findIndex((r => r.id === report.id))),
-            node: report
-          })
+        return Promise.resolve({
+          cursor: cursorForReport(report),
+          node: report
         }).catch(err => {
           console.log(err)
           throw new Error(err);
